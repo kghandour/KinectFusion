@@ -9,3 +9,5 @@ pandas
 sympy
 nose
 plotly
+PyOpenGL
+PyOpenGL_accelerate
