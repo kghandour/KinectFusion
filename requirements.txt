@@ -11,4 +11,5 @@ nose
 plotly
 PyOpenGL
 PyOpenGL_accelerate
+scikit-learn
 open3d
