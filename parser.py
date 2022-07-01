@@ -2,6 +2,7 @@ import os
 import numpy as np
 import math
 import open3d as o3d
+import time
 
 class Parser():
     def __init__(self,  sensor):
@@ -137,23 +138,28 @@ class Parser():
                     cameraSpace[i,j] = np.array([-math.inf, -math.inf, -math.inf, -math.inf])
 
 
-        vertices_position = np.zeros(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4))
-        vertices_color = np.full(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4), 255)
+
+        # vertices_position = np.zeros(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4))
+        # vertices_color = np.full(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4), 255)
+        vertices_position = []
+        vertices_color = []
         for i in range( self.sensor.m_depthImageHeight):
             for j in range( self.sensor.m_depthImageWidth):
                 depthAtPixel = depthMap[i,j]
                 if(depthAtPixel != -math.inf):
-                    vertices_position[i,j] = trajectoryInv.dot(cameraSpace[i,j])
-                    vertices_color[i,j] = [colorMap[i][j][0],colorMap[i][j][1],colorMap[i][j][2],255]
-                else:
-                    vertices_position[i,j] = np.array([-math.inf, -math.inf, -math.inf, -math.inf])
-                    vertices_color[i,j] = np.array([0,0,0,0])
+                    vertices_position.append(trajectoryInv.dot(cameraSpace[i,j])[:3])
+                    vertices_color.append([colorMap[i][j][0],colorMap[i][j][1],colorMap[i][j][2]])
+                    # vertices_position[i,j] = trajectoryInv.dot(cameraSpace[i,j])
+                #     vertices_color[i,j] = [colorMap[i][j][0],colorMap[i][j][1],colorMap[i][j][2],255]
+                # else:
+                #     vertices_position[i,j] = np.array([-math.inf, -math.inf, -math.inf, -math.inf])
+                #     vertices_color[i,j] = np.array([0,0,0,0])
 
 
         fileName = os.path.join("mesh_out/",str(self.fileBaseOut)+str( self.sensor.currentIdx)+".off")
         # self.WriteMesh(vertices_position, vertices_color,  self.sensor.m_colorImageWidth,  self.sensor.m_colorImageHeight, fileName)
-        vert_pos, vert_col = self.cleanUp(vertices_position, vertices_color,  self.sensor.m_colorImageWidth,  self.sensor.m_colorImageHeight)
-        return vert_pos, vert_col
+        # vert_pos, vert_col = self.cleanUp(vertices_position, vertices_color,  self.sensor.m_colorImageWidth,  self.sensor.m_colorImageHeight)
+        return np.array(vertices_position), np.array(vertices_color)
 
     def process(self):
         vis = o3d.visualization.Visualizer()
@@ -161,7 +167,10 @@ class Parser():
         i = 0
         pcd = o3d.geometry.PointCloud()
         while( self.sensor.processNextFrame()):
+            st = time.time()
             vert_pos, vert_col = self.one_loop()
+            et = time.time()
+            print("Time taken to process a frame ", et - st)
             pcd.points = o3d.utility.Vector3dVector(vert_pos)
             pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
             if(i==0):
