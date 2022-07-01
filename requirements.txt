@@ -11,3 +11,4 @@ nose
 plotly
 PyOpenGL
 PyOpenGL_accelerate
+open3d
