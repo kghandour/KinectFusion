@@ -75,20 +75,20 @@ if __name__ == "__main__":
     # Assumes the same file structure as the exercises. Meaning before the Exercises/KinectFusion/main.py
     # Dataset folder will be in Exercises/Data/
     dataset = Dataset("rgbd_dataset_freiburg1_xyz") 
-    sensor = VirtualSensor(dataset, 800)
+    sensor = VirtualSensor(dataset, 40)
     parser = Parser(sensor)
-    # parser.process()
+    parser.process()
     # plot_view = PlotViewer()
-    verts, faces, colors = read_off(open(os.path.join("mesh_out/","mesh_0.off")))
+    # verts, faces, colors = read_off(open(os.path.join("mesh_out/","mesh_0.off")))
 
-    glutInit() # Initialize a glut instance which will allow us to customize our window
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA) # Set the display mode to be colored
-    glutInitWindowSize(1000, 1000)   # Set the width and height of your window
-    glutInitWindowPosition(0, 0)   # Set the position at which this windows should appear
-    wind = glutCreateWindow("Read OFF") # Give your window a title
-    glutDisplayFunc(showScreen)  # Tell OpenGL to call the showScreen method continuously
-    # glutIdleFunc(showScreen)     # Draw any graphics or shapes in the showScreen function at all times
-    glutMainLoop()  # Keeps the window created above displaying/running in a loop
+    # glutInit() # Initialize a glut instance which will allow us to customize our window
+    # glutInitDisplayMode(GLUT_SINGLE | GLUT_RGBA) # Set the display mode to be colored
+    # glutInitWindowSize(1000, 1000)   # Set the width and height of your window
+    # glutInitWindowPosition(0, 0)   # Set the position at which this windows should appear
+    # wind = glutCreateWindow("Read OFF") # Give your window a title
+    # glutDisplayFunc(showScreen)  # Tell OpenGL to call the showScreen method continuously
+    # # glutIdleFunc(showScreen)     # Draw any graphics or shapes in the showScreen function at all times
+    # glutMainLoop()  # Keeps the window created above displaying/running in a loop
 
 
     

@@ -6,7 +6,7 @@ import open3d as o3d
 
 if __name__ == "__main__":
 
-    file1 = open("D:\TUM\\"+str(3)+"DScanning\\mesh_0.off", 'r')
+    file1 = open("./mesh_out/mesh_0.off", 'r')
 
     line = file1.readline()
     line = file1.readline()
@@ -36,10 +36,11 @@ if __name__ == "__main__":
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz)
     pcd.colors = o3d.utility.Vector3dVector(xyzcolors/255)
-    o3d.io.write_point_cloud("D:\TUM\\"+str(3)+"DScanning\\sync.ply", pcd)
+    # o3d.io.write_point_cloud("./mesh_out/sync.ply", pcd)
 
     # Load saved point cloud and visualize it
-    pcd_load = o3d.io.read_point_cloud("D:\TUM\\"+str(3)+"DScanning\\sync.ply")
-    o3d.visualization.draw_geometries([pcd_load])
+    # pcd_load = o3d.io.read_point_cloud("./mesh_out/sync.ply")
+    # print(pcd_load)
+    o3d.visualization.draw_geometries([pcd])
 
    
