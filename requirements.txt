@@ -9,7 +9,6 @@ pandas
 sympy
 nose
 plotly
-PyOpenGL
-PyOpenGL_accelerate
 scikit-learn
+opencv-python
 open3d

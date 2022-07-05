@@ -44,7 +44,8 @@ class VirtualSensor():
         print("ProcessNextFrame "+str(self.currentIdx)+" | " + str(len((self.rgb_images_path))))
 
         self.rgbImage = np.asarray(Image.open(os.path.join(self.kinect_dataset_path,self.rgb_images_path[self.currentIdx])))
-        self.dImage = np.asarray(Image.open(os.path.join(self.kinect_dataset_path,self.depth_images_path[self.currentIdx])))
+        self.dImageRaw = Image.open(os.path.join(self.kinect_dataset_path,self.depth_images_path[self.currentIdx]))
+        self.dImage = np.asarray(self.dImageRaw)
         self.dImage = np.where(self.dImage==0, -math.inf, self.dImage * 1 / 5000)
 
         

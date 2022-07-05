@@ -3,134 +3,88 @@ import numpy as np
 import math
 import open3d as o3d
 import time
+import cv2 
+from PIL import ImageOps
+from layer import Layer
 
 class Parser():
     def __init__(self,  sensor):
         self.sensor =  sensor
         self.fileBaseOut = "mesh_"
+        depthIntrinsics =  self.sensor.m_depthIntrinsics
+        depthIntrinsicsInv = np.linalg.inv(depthIntrinsics)
+        depthExtrinsicsInv = np.linalg.inv( self.sensor.m_depthExtrinsics)
 
-    def cleanUp(self, vertices_position, vertices_color, width, height):
-        vert_pos = []
-        vert_col = []
-        for i in range(height):
-            for j in range(width):
-                if(vertices_position[i][j][0]!=-math.inf and vertices_position[i][j][1]!=-math.inf and vertices_position[i][j][2]!=-math.inf):
-                    vert_pos.append(vertices_position[i][j][:3])
-                    vert_col.append(vertices_color[i][j][:3])
-        return np.array(vert_pos), np.array(vert_col)
+        self.fX = depthIntrinsics[0, 0]
+        self.fY = depthIntrinsics[1, 1]
+        self.cX = depthIntrinsics[0, 2]
+        self.cY = depthIntrinsics[1, 2]
+
 
     def visualize(self, vert_pos, vert_col):
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(vert_pos)
         pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
-        # o3d.io.write_point_cloud("./mesh_out/sync.ply", pcd)
-
-        # Load saved point cloud and visualize it
-        # pcd_load = o3d.io.read_point_cloud("./mesh_out/sync.ply")
-        # print(pcd_load)
         o3d.visualization.draw_geometries([pcd])
 
-    def WriteMesh(self, vertices_position, vertices_color, width, height, filename):
-        f = open(filename, "w")
-        edgeThreshold = 0.01
+    # def compNormalsVerticesAndMask(self):
 
-        nVertices = width*height
-        nFaces = 0
+    #     ### Surface Measuremenet
 
-        for i in range(height):
-            for j in range(width):
-                currentVertex = vertices_position[i,j]
-                if(currentVertex[0]!=-math.inf):
-                    if(j+1 < width and i+1 < height):
-                        rightVertex = vertices_position[i,j+1]
-                        downVertex = vertices_position[i+1,j]
-                        dist1 = np.linalg.norm(currentVertex - rightVertex)
-                        dist2 = np.linalg.norm(currentVertex - downVertex)
-                        dist3 = np.linalg.norm(downVertex - rightVertex)
-                        if(dist1 < edgeThreshold and dist2 < edgeThreshold and dist3 < edgeThreshold and (dist1>0 and dist2 >0 and dist3>0)):
-                            nFaces += 1
-                    if(j-1 > 0 and i+1 < height):
-                        downVertex = vertices_position[i+1,j]
-                        downLeftVertex = vertices_position[i+1, j-1]
-                        dist1 = np.linalg.norm(currentVertex - downLeftVertex)
-                        dist2 = np.linalg.norm(currentVertex - downVertex)
-                        dist3 = np.linalg.norm(downVertex - downLeftVertex)
-                        if(dist1 < edgeThreshold and dist2 < edgeThreshold and dist3 < edgeThreshold and (dist1>0 and dist2 >0 and dist3>0)):
-                            nFaces += 1
-                        
-        f.write("COFF\n")
-        f.write("# numVertices numFaces numEdges\n")
-        f.write(str(nVertices) + " " + str(nFaces) + " 0\n")
-        f.write("# list of Vertices\n")
-        f.write("# X Y Z R G B A\n")
+    #     ## Dk  --------
+    #     ##TODO: Make sure if Depth must be divided by 5000 or not. I normalized the depth directly to 255 instead of dividing by 5000
+    #     imgConv = ImageOps.grayscale(self.sensor.dImageRaw)
+    #     Dk = cv2.bilateralFilter(np.asarray(imgConv), 15,20,20)
+    #     Dk = np.asarray(Dk)
+    #     dHeight = self.sensor.m_depthImageHeight
+    #     dWidth = self.sensor.m_depthImageWidth
 
-        for i in range(height):
-            for j in range(width):
-                if(vertices_position[i][j][0]!=-math.inf and vertices_position[i][j][1]!=-math.inf and vertices_position[i][j][2]!=-math.inf):
-                    f.write(str(vertices_position[i][j][0]) +" "+
-                    str(vertices_position[i][j][1])+" "+
-                    str(vertices_position[i][j][2])+" "+
-                    str(vertices_color[i][j][0])+" "+
-                    str(vertices_color[i][j][1])+" "+
-                    str(vertices_color[i][j][2])+" "+
-                    str(vertices_color[i][j][3])+"\n")
-                else:
-                    f.write(str(0) +" "+
-                    str(0)+" "+
-                    str(0)+" "+
-                    str(vertices_color[i][j][0])+" "+
-                    str(vertices_color[i][j][1])+" "+
-                    str(vertices_color[i][j][2])+" "+
-                    str(vertices_color[i][j][3])+"\n")
+    #     # Vk
+    #     Vk = np.zeros((dHeight,  dWidth, 3))
+    #     X, Y = np.meshgrid(dHeight, dWidth)
+    #     for i in range( dHeight ):
+    #         for j in range( dWidth ):
+    #             x = (j - self.cX) / self.fX
+    #             y = (i - self.cY) / self.fY
+    #             depthAtPixel = Dk[i,j]
+    #             if(depthAtPixel != 0):
+    #                 Vk[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
 
-        f.write("# list of Faces\n")
-        f.write("# nVerticesPerFace idx0 idx1 idx2 ...\n")
-        for i in range(height):
-            for j in range(width):
-                currentVertex = vertices_position[i,j]
-                if(currentVertex[0]!=-math.inf):
-                    if(j+1 < width and i+1 < height):
-                        rightVertex = vertices_position[i,j+1]
-                        downVertex = vertices_position[i+1,j]
-                        dist1 = np.linalg.norm(currentVertex - rightVertex)
-                        dist2 = np.linalg.norm(currentVertex - downVertex)
-                        dist3 = np.linalg.norm(downVertex - rightVertex)
-                        if(dist1 < edgeThreshold and dist2 < edgeThreshold and dist3 < edgeThreshold and (dist1>0 or dist2 >0 or dist3>0)):
-                            f.write("3 "+str(j+ i*width)+" "+ str(j+1+ i*width)+" "+ str(j+(i+1)*width)+"\n")
-                    if(j-1 > 0 and i+1 < height):
-                        downVertex = vertices_position[i+1,j]
-                        downLeftVertex = vertices_position[i+1, j-1]
-                        dist1 = np.linalg.norm(currentVertex - downLeftVertex)
-                        dist2 = np.linalg.norm(currentVertex - downVertex)
-                        dist3 = np.linalg.norm(downVertex - downLeftVertex)
-                        if(dist1 < edgeThreshold and dist2 < edgeThreshold and dist3 < edgeThreshold and (dist1>0 or dist2 >0 or dist3>0)):
-                            f.write("3 "+str(j+ i*width)+" "+ str(j+(i+1)*width)+" "+ str(j-1+(i+1)*width)+"\n")
         
-        f.close()
+    #     ## Nk
+    #     Nk = np.zeros(( dHeight,  dWidth, 3))
+    #     M = np.zeros((dHeight,dWidth))
+
+    #     for u in range( dHeight -1): #Neighbouring
+    #         for v in range( dWidth -1 ): #Neighbouring
+    #             if 0 < Vk[u, v, 2] < 255:
+    #                 n = np.cross( (Vk[u+1, v, :] - Vk[u,v,:]), Vk[u, v+1,:] - Vk[u,v,:])
+    #                 if(np.linalg.norm(n)!=0 and Dk[u,v]!=0):
+    #                     Nk[u, v, :] = n/np.linalg.norm(n)
+    #                     M[u,v] = 1
+
+
+    #     Vk = Vk[M==1]
+    #     print(Vk.shape, Nk.shape, M.shape) ## Supposed to be HxW,3 , H,W,3 , H,W
+    #     return Vk, Nk, M
 
     def one_loop(self):
         depthMap =  self.sensor.dImage
         colorMap =  self.sensor.rgbImage
 
-        depthIntrinsics =  self.sensor.m_depthIntrinsics
-        depthIntrinsicsInv = np.linalg.inv(depthIntrinsics)
+        dHeight = self.sensor.m_depthImageHeight
+        dWidth = self.sensor.m_depthImageWidth
 
-        fX = depthIntrinsics[0, 0]
-        fY = depthIntrinsics[1, 1]
-        cX = depthIntrinsics[0, 2]
-        cY = depthIntrinsics[1, 2]
 
-        depthExtrinsicsInv = np.linalg.inv( self.sensor.m_depthExtrinsics)
+        cameraSpace = np.zeros((dHeight,  dWidth, 4))
 
         trajectory =  self.sensor.currentTrajectory
         trajectoryInv = np.linalg.inv(trajectory)
 
-        cameraSpace = np.zeros(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4))
-
         for i in range( self.sensor.m_depthImageHeight):
             for j in range( self.sensor.m_depthImageWidth):
-                x = (j - cX) / fX
-                y = (i - cY) / fY
+                x = (j - self.cX) / self.fX
+                y = (i - self.cY) / self.fY
                 depthAtPixel = depthMap[i,j]
                 if(depthAtPixel != -math.inf):
                     cameraSpace[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel, 1])
@@ -167,6 +121,19 @@ class Parser():
         i = 0
         pcd = o3d.geometry.PointCloud()
         while( self.sensor.processNextFrame()):
+
+
+            depthImageRaw =  self.sensor.dImage
+            colorImageRaw =  self.sensor.rgbImage
+            h, w = depthImageRaw.shape
+            pyramid = {}
+            pyramid['l1'] = Layer(depthImageRaw, colorImageRaw, self.sensor)
+            pyramid['l2'] = Layer(cv2.resize(depthImageRaw, (int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)
+            pyramid['l3'] = Layer(cv2.resize(depthImageRaw, (int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
+            
+
+
+
             st = time.time()
             vert_pos, vert_col = self.one_loop()
             et = time.time()
@@ -181,7 +148,6 @@ class Parser():
             vis.update_renderer()
             i+=1
         vis.destroy_window()
-            # self.visualize(vert_pos, vert_col)
 
 
         
