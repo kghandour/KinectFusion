@@ -3,6 +3,11 @@ from sys import exc_info
 import time
 import numpy as np
 import torch
+import copy
+
+from dataset import Dataset
+from parser import Parser
+from virtualSensor import VirtualSensor
 
 
 class TSDFVolume:
@@ -16,14 +21,14 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, min_bounds, max_bounds, voxel_size, camera_intrinsics, margin=2):
+    def __init__(self, min_bounds, max_bounds, voxel_size, camera_intrinsics, margin=5):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
         self.voxel_size = float(voxel_size)
         self.camera_intrinsics = torch.from_numpy(camera_intrinsics)
         self.camera_intrinsics_T = self.camera_intrinsics.T
-        self.trunc_distance = self.volume_size*margin
+        self.trunc_distance = self.voxel_size*margin
 
         self.volume_size = np.ceil(
             (self.max_bounds-self.min_bounds)/self.voxel_size).astype(int)
@@ -48,128 +53,87 @@ class TSDFVolume:
         depth = torch.from_numpy(rgbImage)
         extrinsic_inv = torch.inverse(pose)
 
+        # Convert volume world cordinates to camera cordinates
         volume_camera_cordinates = torch.matmul(
             self.volume_world_cordinates, extrinsic_inv.T)
 
         # RK
+        # Z values of camera cordinates
         volume_camera_cordinates_z = torch.broadcast_to(
             volume_camera_cordinates[:, 2], (2, -1)).T
+        # Convert volume camera cordinates to pixel cordinates
         volume_pixel_cordinates_xyz = torch.matmul(
             volume_camera_cordinates[:, :3], self.camera_intrinsics_T)
+
+        # divide by z and remove z
         volume_pixel_cordinates_xy = torch.divide(
             volume_pixel_cordinates_xyz[:, :2], volume_camera_cordinates_z, rounding_mode='trunc')
 
+        # get indices of valid pixels
         volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] >= 0) &
                                                  (volume_pixel_cordinates_xy[:, 1] >= 0) &
                                                  (volume_pixel_cordinates_xy[:, 0] < width) &
                                                  (volume_pixel_cordinates_xy[:, 1] < height) &
                                                  (volume_camera_cordinates_z[:, 0] > 0),
                                                  True, False)
+        # Apply indexing  to get the depth value of valid pixels
         volume_camera_cordinates_depth_used = volume_camera_cordinates_z[:,
                                                                          0][volume_camera_valid_pixels]
-        depth_img_used = depthImage[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
+        # Get the valid depth valuse of the source img corrosponding to valid projections from the volume
+        depth_img_used = depth[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
             1, 1)].reshape(-1,)
-
+        # distance from the camera center along each depthmap ray,
         r = depth_img_used-volume_camera_cordinates_depth_used
+
+        # valid depths that lay inside
+        valid_depth_img_points = torch.where(
+            (depth_img_used > 0) & r > self.trunc_distance)
+
+        # Integrate TSDF
+
+        # voxel cordinates that correspond to the valid depth img cordinates
+        volume_voxel_cordinates_used = self.vox_coords[valid_depth_img_points]
+
+        # The old weights before integration
+        old_volume_weight_values_used = copy.deepcopy(
+            self._weight_vol_cpu[valid_depth_img_points])
+        # the old tsdf before integration
+        old_volume_tsdf_values_used = copy.deepcopy(
+            self._tsdf_vol_cpu[valid_depth_img_points])
+
+        # clamp far distances
+        dist = torch.min(1, r / self.trunc_distance)[valid_depth_img_points]
+
+        # Fk(p)  = ( ( Wk−1(p) * Fk−1(p) ) + ( WRk(p) * FRk(p) ) ) / ( Wk−1(p) + WRk(p))
+        self.tsdf_volume[volume_voxel_cordinates_used] = (
+            (old_volume_tsdf_values_used*old_volume_weight_values_used)+(dist*1))/(old_volume_weight_values_used+1)
+        # Wk(p)  =Wk−1(p)+WRk(p)
+        self.weight_volume[volume_voxel_cordinates_used] = torch.add(
+            1, old_volume_weight_values_used)
 
 
 if __name__ == '__main__':
+    pass
+    # dataset = Dataset("rgbd_dataset_freiburg1_xyz")
+    # sensor = VirtualSensor(dataset, 800)
+    # parser = Parser(sensor)
+    # parser.process()
 
-    # depth_im = torch.tensor([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [
-    #                         11, 12, 13, 14, 15], [16, 17, 18, 19, 20], [21, 22, 23, 24, 25]])
-    # pix_y = torch.tensor([0, 1, 2, 3, 4, 5, 2, 0])
-    # pix_x = torch.tensor([2, 4, 4, 5, 8, 3, 2, 4])
+    # maxX = 2
+    # maxY = 2.2
+    # maxZ = 3
 
-    # pixy_xy = torch.tensor([[0, 2], [1, 4], [2, 4], [3, 5], [
-    #                        4, 8], [5, 3], [2, 2], [0, 4]])
-    # valid_pix = torch.tensor(
-    #     [True, True, True, False, False, False, True, False])
-    # s1 = time.time()
-    # print(depth_im[pix_y[valid_pix], pix_x[valid_pix]])
-    # print(time.time()-s1)
-    # s2 = time.time()
-    # print((depth_im[pixy_xy[valid_pix].split(1, 1)].reshape(-1, )))
-    # print(time.time()-s2)
+    # minX = -0.5
+    # minY = -0.8
+    # minZ = -1
 
-    # print(pixy_xy[valid_pix].split(1, 1))
-    # print(pixy_xy[valid_pix])
-    # exit()
-    print('')
+    # min_bounds = np.asarray([minX, minY, minZ])
+    # max_bounds = np.asarray([maxX, maxY, maxZ])
 
-    maxX = 2
-    maxY = 2.2
-    maxZ = 3
+    # voxel_size = 0.03
 
-    minX = -0.5
-    minY = -0.8
-    minZ = -1
-
-    min_bounds = np.asarray([minX, minY, minZ])
-    max_bounds = np.asarray([maxX, maxY, maxZ])
-
-    voxel_size = 0.03
-
-    volume_size = np.ceil(
-        (max_bounds-min_bounds)/voxel_size).astype(int)
+    # volume_size = np.ceil(
+    #     (max_bounds-min_bounds)/voxel_size).astype(int)
 
     # TSDFVolume(min_bounds=min_bounds,
     #            max_bounds=max_bounds, voxel_size=voxel_size)
-
-    # volume_voxel_indices = np.indices(volume_size).reshape(3, -1).T
-
-    # volume_world_cordinates = torch.tensor(min_bounds +
-    #                                        (voxel_size*volume_voxel_indices))
-
-    # volume_world_cordinates = torch.cat(
-    #     (volume_world_cordinates, torch.ones(volume_world_cordinates.shape[0], 1)), dim=-1)
-
-    # # print(volume_voxel_indices[:5])
-
-    # # print((volume_voxel_indices[:5])[[False, True, False, True, False], 2])
-    # # print(volume_size)
-
-    # pose_estimation = torch.from_numpy(
-    #     np.array([[1, 0, 0, 2], [0, 1, 0, 2], [0, 0, 1, 3], [0, 0, 0, 1]], dtype=np.float64))
-
-    # extrinsic_inv = torch.inverse(pose_estimation)
-    # # # print(extrinsic_inv)
-
-    # cam_c_1 = torch.matmul(volume_world_cordinates, extrinsic_inv.T
-    #                        )
-
-    # m_colorIntrinsics = torch.from_numpy(
-    #     np.array([525.0, 0.0, 319.5, 0.0, 525.0, 239.5, 0.0, 0.0, 1]).reshape((3, 3)))
-
-    # # print(m_colorIntrinsics)
-
-    # # print(cam_c_1[0])
-    # # print(cam_c_1[:, :3].shape)
-
-    # volume_pixel_cordinates = (torch.matmul(
-    #     cam_c_1[:, :3], m_colorIntrinsics.T))
-
-    # cam_z = torch.broadcast_to(cam_c_1[:, 2], (2, -1)).T
-
-    # # print(volume_pixel_cordinates.shape)
-    # pix_xy = (torch.divide(
-    #     volume_pixel_cordinates[:, :2], cam_z, rounding_mode='trunc'))
-
-    # z_5 = cam_z[:5, :]
-    # pix_xy_5 = pix_xy[:5, :]
-
-    # # print(pix_xy_5)
-
-    # z_test = torch.tensor([[1, 1], [1, 1], [1, 1], [1, 1], [1, 1]])
-    # print(pix_xy_5)
-    # mask = (torch.where((pix_xy_5[:, 0] >= 0) & (pix_xy_5[:, 1] >= 0) & (pix_xy_5[:, 0] % 2 == 0) & (pix_xy_5[:, 1] % 1 == 0) &
-    #                     (z_test[:, 0] == 1), True, False))
-    # print(mask)
-    # print(z_5[:, 0])
-    # print(z_5[:, 0][mask])
-    # print(volume_pixel_cordinates.shape)
-
-    # print(volume_pixel_cordinates[0])
-    # print(volume_pixel_cordinates.shape)
-    # print(torch.equal(cam_c_1, cam_c_2))
-
-    # source_points.dot(pose_estimation.T)
