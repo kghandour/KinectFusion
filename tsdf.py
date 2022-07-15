@@ -5,10 +5,6 @@ import numpy as np
 import torch
 import copy
 
-from dataset import Dataset
-from parser import Parser
-from virtualSensor import VirtualSensor
-
 
 class TSDFVolume:
     """Constructor.
@@ -21,7 +17,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, min_bounds, max_bounds, voxel_size, camera_intrinsics, margin=5):
+    def __init__(self, camera_intrinsics, min_bounds=[0,0,0], max_bounds=[30,30,30], voxel_size=2, margin=5):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -45,7 +41,7 @@ class TSDFVolume:
             volume_world_cordinates = self.min_bounds + \
                 (self.voxel_size*self.volume_voxel_indices)
             self.volume_world_cordinates = torch.cat(
-                (volume_world_cordinates, torch.ones(volume_world_cordinates.shape[0], 1)), dim=-1)
+                (torch.from_numpy(volume_world_cordinates), torch.ones(volume_world_cordinates.shape[0], 1)), dim=-1)
 
     def integrate(self, depthImage, rgbImage, pose_estimation):
         height, width = depthImage.shape
@@ -68,7 +64,6 @@ class TSDFVolume:
         # divide by z and remove z
         volume_pixel_cordinates_xy = torch.divide(
             volume_pixel_cordinates_xyz[:, :2], volume_camera_cordinates_z, rounding_mode='trunc')
-
         # get indices of valid pixels
         volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] >= 0) &
                                                  (volume_pixel_cordinates_xy[:, 1] >= 0) &
@@ -79,6 +74,9 @@ class TSDFVolume:
         # Apply indexing  to get the depth value of valid pixels
         volume_camera_cordinates_depth_used = volume_camera_cordinates_z[:,
                                                                          0][volume_camera_valid_pixels]
+
+        print("Conditional",(volume_camera_valid_pixels == True).nonzero(as_tuple=True)[0])
+        # print(volume_pixel_cordinates_xy[volume_camera_valid_pixels])
         # Get the valid depth valuse of the source img corrosponding to valid projections from the volume
         depth_img_used = depth[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
             1, 1)].reshape(-1,)
