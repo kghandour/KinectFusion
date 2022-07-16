@@ -15,6 +15,7 @@ class Parser():
         depthIntrinsics =  self.sensor.m_depthIntrinsics
         depthIntrinsicsInv = np.linalg.inv(depthIntrinsics)
         depthExtrinsicsInv = np.linalg.inv( self.sensor.m_depthExtrinsics)
+        self.tsdfVolume=TSDFVolume(depthIntrinsics)
 
         self.fX = depthIntrinsics[0, 0]
         self.fY = depthIntrinsics[1, 1]
@@ -132,9 +133,10 @@ class Parser():
             pyramid['l2'] = Layer(cv2.resize(depthImageRaw, (int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)
             pyramid['l3'] = Layer(cv2.resize(depthImageRaw, (int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
             
-            tsdf = TSDFVolume(self.sensor.m_depthIntrinsics)
-            tsdf.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage, self.sensor.m_depthExtrinsics)
+            self.tsdfVolume.integrate(
+                pyramid["l1"].depthImage, pyramid["l1"].rgbImage, np.eye(4))
 
+            exit()
             st = time.time()
             vert_pos, vert_col = self.one_loop()
             et = time.time()
