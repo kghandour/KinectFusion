@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import copy
+from skimage import measure
+import open3d as o3d
 
 
 class TSDFVolume:
@@ -14,7 +16,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=3):
+    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=5):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -31,10 +33,11 @@ class TSDFVolume:
                 tuple(self.volume_size), dtype=torch.float64)
             self.weight_volume = torch.zeros(
                 tuple(self.volume_size), dtype=torch.float32)
+            self.rgb_volume = torch.zeros(
+                (self.volume_size[0], self.volume_size[1], self.volume_size[2], 3), dtype=torch.float32)
 
             self.volume_voxel_indices = np.indices(
                 self.volume_size).reshape(3, -1).T
-
             volume_world_cordinates = self.min_bounds + \
                 (self.voxel_size*self.volume_voxel_indices)
             self.volume_world_cordinates = torch.cat(
@@ -44,7 +47,7 @@ class TSDFVolume:
 
     def integrate(self, depthImage, rgbImage, pose_estimation, weight=1):
         with torch.no_grad():
-            height, width = depthImage.shape
+            width, height = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
             depth = torch.from_numpy(depthImage)
             extrinsic_inv = torch.inverse(pose)
@@ -68,15 +71,15 @@ class TSDFVolume:
 
             volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] >= 0) &
                                                      (volume_pixel_cordinates_xy[:, 1] >= 0) &
-                                                     (volume_pixel_cordinates_xy[:, 0] < height) &
-                                                     (volume_pixel_cordinates_xy[:, 1] < width) &
+                                                     (volume_pixel_cordinates_xy[:, 0] < width) &
+                                                     (volume_pixel_cordinates_xy[:, 1] < height) &
                                                      (volume_camera_cordinates_z[:, 0] > 0), True, False
                                                      )
 
             # Apply indexing  to get the depth value of valid pixels
             volume_camera_cordinates_depth_used = volume_camera_cordinates_z[:,
                                                                              0][volume_camera_valid_pixels]
-            # Get the valid depth valuse of the source img corrosponding to valid projections from the volume
+            # Get the valid depth values of the source img corrosponding to valid projections from the volume
             depth_img_used = depth[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
                 1, 1)].reshape(-1,)
 
@@ -113,3 +116,30 @@ class TSDFVolume:
             # Wk(p)  =Wk−1(p)+WRk(p)
             self.weight_volume[cordinates] = torch.add(
                 weight_tensor, old_volume_weight_values_used)
+
+            # RGB values of the depth used
+            rgb_used = rgbImage[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
+                1, 1)].reshape(-1, 3)[valid_depth_img_points]
+            # the old colors before integration
+            old_volume_rgb_values_used = copy.deepcopy(
+                self.rgb_volume[cordinates])
+            # [:,none] => to make weight as vector not float to be able to multiplicate ([1,2,3] =>[[1],[2],[3]])
+            self.rgb_volume[cordinates] = ((old_volume_weight_values_used[:, None] * old_volume_rgb_values_used) + (weight_tensor[:, None] * rgb_used)) / (
+                (old_volume_weight_values_used+weight_tensor)[:, None])
+
+    def visualize(self):
+        vertices, triangles, vertex_normals, vals = measure.marching_cubes(
+            self.tsdf_volume.cpu().numpy(), level=None)
+        volume_cordinates = np.round(vertices).astype(int)
+        # volume indices to world coordinates
+        vertices = vertices * self.voxel_size + self.min_bounds
+
+        vertex_colors = self.rgb_volume[volume_cordinates[:, 0],
+                                        volume_cordinates[:, 1], volume_cordinates[:, 2]].cpu().numpy()
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(vertices.astype(float))
+        mesh.triangles = o3d.utility.Vector3iVector(triangles.astype(np.int32))
+        mesh.vertex_colors = o3d.utility.Vector3dVector(
+            vertex_colors.astype(np.uint8) / 255.)
+
+        return mesh
