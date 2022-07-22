@@ -20,6 +20,7 @@ class Parser():
         self.pyramids_so_far = []
         self.Transformation_loc2glo_list = []
         self.T_matrix = np.eye(4)
+        self.icp_optimizer = ICPOptimizer()
 
 
     def visualize(self, vert_pos, vert_col):
@@ -90,28 +91,29 @@ class Parser():
             pyramid['l3'] = Layer(cv2.resize(depthImageRaw, (int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
             self.pyramids_so_far.append(pyramid)
             if(i==0):
-                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, None, np.eye(4))
+                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, None)
             else:
-                self.T_matrix = ICPOptimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1].Nk)
-                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume, np.eye(4))    
+                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk)
+                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume)    
+                self.Transformation_list.append(self.T_matrix)
             self.prev_volume = curr_volume
 
             i+=1
-            exit()
-            st = time.time()
-            vert_pos, vert_col = self.one_loop()
-            et = time.time()
-            print("Time taken to process a frame ", et - st)
-            pcd.points = o3d.utility.Vector3dVector(vert_pos)
-            pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
-            if(i==0):
-                vis.add_geometry(pcd)
-            else:
-                vis.update_geometry(pcd)
-            vis.poll_events()
-            vis.update_renderer()
-            i+=1
-        vis.destroy_window()
+            # exit()
+        #     st = time.time()
+        #     vert_pos, vert_col = self.one_loop()
+        #     et = time.time()
+        #     print("Time taken to process a frame ", et - st)
+        #     pcd.points = o3d.utility.Vector3dVector(vert_pos)
+        #     pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
+        #     if(i==0):
+        #         vis.add_geometry(pcd)
+        #     else:
+        #         vis.update_geometry(pcd)
+        #     vis.poll_events()
+        #     vis.update_renderer()
+        #     i+=1
+        # vis.destroy_window()
 
 
         

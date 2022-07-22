@@ -119,18 +119,16 @@ class TSDFVolume:
             dist = torch.min(torch.tensor(1), r /
                              self.trunc_distance)[valid_depth_img_points]
 
-
-            weight_tensor = torch.full(dist.shape, weight)
             # Fk(p)  = ( ( Wk−1(p) * Fk−1(p) ) + ( WRk(p) * FRk(p) ) ) / ( Wk−1(p) + WRk(p))
             if (prev_volume is not None):
                 self.tsdf_volume[cordinates] = (
-                    (old_volume_tsdf_values_used*old_volume_weight_values_used)+(dist*weight_tensor))/(old_volume_weight_values_used+weight_tensor)
+                    (old_volume_tsdf_values_used*old_volume_weight_values_used)+(dist*weight))/(old_volume_weight_values_used+weight)
                 # Wk(p)  =Wk−1(p)+WRk(p)
                 self.weight_volume[cordinates] = torch.add(
-                    weight_tensor, old_volume_weight_values_used)
+                    weight, old_volume_weight_values_used)
             else:
-                self.tsdf_volume[cordinates] = ((dist*weight_tensor))
-                self.weight_volume[cordinates] = weight_tensor
+                self.tsdf_volume[cordinates] = ((dist*weight))
+                self.weight_volume[cordinates] = weight
 
             curr_vol = Volume(self.tsdf_volume, self.weight_volume)
             return curr_vol
