@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import copy
 
+from volume import Volume
+
 
 class TSDFVolume:
     """Constructor.
@@ -14,8 +16,9 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=3):
+    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=3, origin=(0,0,0)):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
+        self.origin = origin
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
         self.voxel_size = float(voxel_size)
@@ -27,8 +30,8 @@ class TSDFVolume:
             (self.max_bounds-self.min_bounds)/self.voxel_size).astype(int)
 
         with torch.no_grad():
-            self.tsdf_volume = torch.ones(
-                tuple(self.volume_size), dtype=torch.float64)
+            self.tsdf_volume = torch.full(
+                tuple(self.volume_size),-1, dtype=torch.float64)
             self.weight_volume = torch.zeros(
                 tuple(self.volume_size), dtype=torch.float32)
 
@@ -42,7 +45,15 @@ class TSDFVolume:
             self.volume_voxel_indices = torch.from_numpy(
                 self.volume_voxel_indices)
 
-    def integrate(self, depthImage, rgbImage, pose_estimation, weight=1):
+    def Volume2World(self, x, y, z):
+        worldSpace = np.zeros(3)
+        worldSpace[0] = x * self.voxel_size
+        worldSpace[1] = y * self.voxel_size
+        worldSpace[2] = z * self.voxel_size
+        worldSpace += self.origin
+        return worldSpace
+
+    def integrate(self, depthImage, rgbImage, pose_estimation, prev_volume: Volume, weight=1):
         with torch.no_grad():
             height, width = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
@@ -51,7 +62,7 @@ class TSDFVolume:
 
             # Convert volume world cordinates to camera cordinates
             volume_camera_cordinates = torch.matmul(
-                self.volume_world_cordinates, extrinsic_inv.T)
+                self.volume_world_cordinates, extrinsic_inv.T)  ## Lambda 
 
             # RK
             # Z values of camera cordinates
@@ -73,9 +84,13 @@ class TSDFVolume:
                                                      (volume_camera_cordinates_z[:, 0] > 0), True, False
                                                      )
 
+
             # Apply indexing  to get the depth value of valid pixels
             volume_camera_cordinates_depth_used = volume_camera_cordinates_z[:,
                                                                              0][volume_camera_valid_pixels]
+
+                                                                ## TODO: NANs 
+
             # Get the valid depth valuse of the source img corrosponding to valid projections from the volume
             depth_img_used = depth[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
                 1, 1)].reshape(-1,)
@@ -95,21 +110,28 @@ class TSDFVolume:
                                                       0], volume_voxel_cordinates_used[:, 1], volume_voxel_cordinates_used[:, 2]
 
             # The old weights before integration
-            old_volume_weight_values_used = copy.deepcopy(
-                self.weight_volume[cordinates])
-            # the old tsdf before integration
-            old_volume_tsdf_values_used = copy.deepcopy(
-                self.tsdf_volume[cordinates])
+            if (prev_volume is not None):
+                old_volume_weight_values_used = prev_volume.weights_volume
+                # the old tsdf before integration
+                old_volume_tsdf_values_used = prev_volume.tsdf_volume
 
             # clamp far distances
             dist = torch.min(torch.tensor(1), r /
                              self.trunc_distance)[valid_depth_img_points]
 
-            weight_tensor = torch.full(dist.shape, weight)
 
+            weight_tensor = torch.full(dist.shape, weight)
             # Fk(p)  = ( ( Wk−1(p) * Fk−1(p) ) + ( WRk(p) * FRk(p) ) ) / ( Wk−1(p) + WRk(p))
-            self.tsdf_volume[cordinates] = (
-                (old_volume_tsdf_values_used*old_volume_weight_values_used)+(dist*weight_tensor))/(old_volume_weight_values_used+weight_tensor)
-            # Wk(p)  =Wk−1(p)+WRk(p)
-            self.weight_volume[cordinates] = torch.add(
-                weight_tensor, old_volume_weight_values_used)
+            if (prev_volume is not None):
+                self.tsdf_volume[cordinates] = (
+                    (old_volume_tsdf_values_used*old_volume_weight_values_used)+(dist*weight_tensor))/(old_volume_weight_values_used+weight_tensor)
+                # Wk(p)  =Wk−1(p)+WRk(p)
+                self.weight_volume[cordinates] = torch.add(
+                    weight_tensor, old_volume_weight_values_used)
+            else:
+                self.tsdf_volume[cordinates] = ((dist*weight_tensor))
+                self.weight_volume[cordinates] = weight_tensor
+
+            curr_vol = Volume(self.tsdf_volume, self.weight_volume)
+            return curr_vol
+

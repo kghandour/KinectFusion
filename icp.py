@@ -114,28 +114,28 @@ class ICPOptimizer():
         return pose_estimation
 
 
-if __name__ == '__main__':
-    source = o3d.io.read_triangle_mesh("../Data/bunny_trans.off")
-    target = o3d.io.read_triangle_mesh("../Data/bunny.off")
+# if __name__ == '__main__':
+#     source = o3d.io.read_triangle_mesh("../Data/bunny_trans.off")
+#     target = o3d.io.read_triangle_mesh("../Data/bunny.off")
 
-    target.compute_vertex_normals(normalized=True)
-    source.compute_vertex_normals(normalized=True)
+#     target.compute_vertex_normals(normalized=True)
+#     source.compute_vertex_normals(normalized=True)
 
-    source_vertices = np.asarray(source.vertices)
-    source_vertices = np.c_[source_vertices, np.ones(source_vertices.shape[0])]
+#     source_vertices = np.asarray(source.vertices)
+#     source_vertices = np.c_[source_vertices, np.ones(source_vertices.shape[0])]
 
-    target_vertices = np.asarray(target.vertices)
-    target_vertices = np.c_[target_vertices, np.ones(target_vertices.shape[0])]
+#     target_vertices = np.asarray(target.vertices)
+#     target_vertices = np.c_[target_vertices, np.ones(target_vertices.shape[0])]
 
-    source_vertex_normals = np.asarray(source.vertex_normals)
-    target_vertex_normals = np.asarray(target.vertex_normals)
+#     source_vertex_normals = np.asarray(source.vertex_normals)
+#     target_vertex_normals = np.asarray(target.vertex_normals)
 
-    # pose_estimation = np.eye(4)
+#     # pose_estimation = np.eye(4)
 
-    optimizer = ICPOptimizer(num_iterations=10)
+#     optimizer = ICPOptimizer(num_iterations=10)
 
-    pose_estimation = (optimizer.estimate_pose(source_points=source_vertices, target_points=target_vertices,
-                                               source_noramls=source_vertex_normals, target_normals=target_vertex_normals))
-    mesh_t = copy.deepcopy(source).transform(pose_estimation)
-    o3d.visualization.draw_geometries([mesh_t, target])
-    exit()
+#     pose_estimation = (optimizer.estimate_pose(source_points=source_vertices, target_points=target_vertices,
+#                                                source_noramls=source_vertex_normals, target_normals=target_vertex_normals))
+#     mesh_t = copy.deepcopy(source).transform(pose_estimation)
+#     o3d.visualization.draw_geometries([mesh_t, target])
+#     exit()

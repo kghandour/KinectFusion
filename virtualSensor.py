@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import os
 import math
+from camera_sensors import CamDetails
 
 class VirtualSensor():
     def __init__(self, dataset, increment):
@@ -16,15 +17,15 @@ class VirtualSensor():
         self.currentIdx = -1
         self.increment = increment   ## Change increment to skip frames in the middle
 
-        self.m_colorImageWidth = 640
-        self.m_colorImageHeight = 480
-        self.m_depthImageWidth = 640
-        self.m_depthImageHeight = 480
+        self.m_colorImageWidth = CamDetails.colorWidth
+        self.m_colorImageHeight = CamDetails.colorHeight
+        self.m_depthImageWidth = CamDetails.depthWidth
+        self.m_depthImageHeight = CamDetails.depthHeight
         
-        self.m_colorIntrinsics = np.array([525.0, 0.0, 319.5, 0.0, 525.0, 239.5,0.0, 0.0, 1]).reshape((3,3))
+        self.m_colorIntrinsics = CamDetails.colorIntrinsics
 
 
-        self.m_depthIntrinsics = self.m_colorIntrinsics
+        self.m_depthIntrinsics = CamDetails.depthIntrinsics
 
         self.m_colorExtrinsics = np.identity(4)
         self.m_depthExtrinsics = np.identity(4)

@@ -5,22 +5,21 @@ import open3d as o3d
 import time
 import cv2 
 from PIL import ImageOps
+from camera_sensors import CamDetails
+from icp import ICPOptimizer
+from raycast import Raycast
 from layer import Layer
+from transforms import Transforms
 from tsdf import TSDFVolume
 
 class Parser():
     def __init__(self,  sensor):
         self.sensor =  sensor
         self.fileBaseOut = "mesh_"
-        depthIntrinsics =  self.sensor.m_depthIntrinsics
-        depthIntrinsicsInv = np.linalg.inv(depthIntrinsics)
-        depthExtrinsicsInv = np.linalg.inv( self.sensor.m_depthExtrinsics)
-        self.tsdfVolume=TSDFVolume(depthIntrinsics)
-
-        self.fX = depthIntrinsics[0, 0]
-        self.fY = depthIntrinsics[1, 1]
-        self.cX = depthIntrinsics[0, 2]
-        self.cY = depthIntrinsics[1, 2]
+        self.tsdfVolume=TSDFVolume(CamDetails.depthIntrinsics)
+        self.pyramids_so_far = []
+        self.Transformation_loc2glo_list = []
+        self.T_matrix = np.eye(4)
 
 
     def visualize(self, vert_pos, vert_col):
@@ -28,47 +27,6 @@ class Parser():
         pcd.points = o3d.utility.Vector3dVector(vert_pos)
         pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
         o3d.visualization.draw_geometries([pcd])
-
-    # def compNormalsVerticesAndMask(self):
-
-    #     ### Surface Measuremenet
-
-    #     ## Dk  --------
-    #     ##TODO: Make sure if Depth must be divided by 5000 or not. I normalized the depth directly to 255 instead of dividing by 5000
-    #     imgConv = ImageOps.grayscale(self.sensor.dImageRaw)
-    #     Dk = cv2.bilateralFilter(np.asarray(imgConv), 15,20,20)
-    #     Dk = np.asarray(Dk)
-    #     dHeight = self.sensor.m_depthImageHeight
-    #     dWidth = self.sensor.m_depthImageWidth
-
-    #     # Vk
-    #     Vk = np.zeros((dHeight,  dWidth, 3))
-    #     X, Y = np.meshgrid(dHeight, dWidth)
-    #     for i in range( dHeight ):
-    #         for j in range( dWidth ):
-    #             x = (j - self.cX) / self.fX
-    #             y = (i - self.cY) / self.fY
-    #             depthAtPixel = Dk[i,j]
-    #             if(depthAtPixel != 0):
-    #                 Vk[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
-
-        
-    #     ## Nk
-    #     Nk = np.zeros(( dHeight,  dWidth, 3))
-    #     M = np.zeros((dHeight,dWidth))
-
-    #     for u in range( dHeight -1): #Neighbouring
-    #         for v in range( dWidth -1 ): #Neighbouring
-    #             if 0 < Vk[u, v, 2] < 255:
-    #                 n = np.cross( (Vk[u+1, v, :] - Vk[u,v,:]), Vk[u, v+1,:] - Vk[u,v,:])
-    #                 if(np.linalg.norm(n)!=0 and Dk[u,v]!=0):
-    #                     Nk[u, v, :] = n/np.linalg.norm(n)
-    #                     M[u,v] = 1
-
-
-    #     Vk = Vk[M==1]
-    #     print(Vk.shape, Nk.shape, M.shape) ## Supposed to be HxW,3 , H,W,3 , H,W
-    #     return Vk, Nk, M
 
     def one_loop(self):
         depthMap =  self.sensor.dImage
@@ -123,8 +81,6 @@ class Parser():
         i = 0
         pcd = o3d.geometry.PointCloud()
         while( self.sensor.processNextFrame()):
-
-
             depthImageRaw =  self.sensor.dImage
             colorImageRaw =  self.sensor.rgbImage
             h, w = depthImageRaw.shape
@@ -132,10 +88,15 @@ class Parser():
             pyramid['l1'] = Layer(depthImageRaw, colorImageRaw, self.sensor)
             pyramid['l2'] = Layer(cv2.resize(depthImageRaw, (int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)
             pyramid['l3'] = Layer(cv2.resize(depthImageRaw, (int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
-            
-            self.tsdfVolume.integrate(
-                pyramid["l1"].depthImage, pyramid["l1"].rgbImage, np.eye(4))
+            self.pyramids_so_far.append(pyramid)
+            if(i==0):
+                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, None, np.eye(4))
+            else:
+                self.T_matrix = ICPOptimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1].Nk)
+                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume, np.eye(4))    
+            self.prev_volume = curr_volume
 
+            i+=1
             exit()
             st = time.time()
             vert_pos, vert_col = self.one_loop()

@@ -3,6 +3,8 @@ from cv2 import destroyWindow
 import numpy as np
 from PIL import ImageOps
 
+from transforms import Transforms
+
 
 class Layer():
     def __init__(self,  depthImage, rgbImage, sensor):
@@ -22,6 +24,7 @@ class Layer():
 
         self.Dk = []
         self.Vk = np.zeros((self.dHeight,  self.dWidth, 3))
+        self.Vk_h = np.zeros((self.dHeight,  self.dWidth, 4))
         self.Nk = np.zeros(( self.dHeight,  self.dWidth, 3))
         self.M = np.zeros((self.dHeight, self.dWidth))
 
@@ -41,16 +44,18 @@ class Layer():
         dHeight = self.dHeight
         dWidth = self.dWidth
 
-        # Vk
+        # Vk = Camera space
         
         X, Y = np.meshgrid(dHeight, dWidth)
-        for i in range( dHeight ):
-            for j in range( dWidth ):
-                x = (j - self.cX) / self.fX
-                y = (i - self.cY) / self.fY
-                depthAtPixel = Dk[i,j]
-                if(depthAtPixel != 0):
-                    self.Vk[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
+        self.Vk = Transforms.screen2cam(Dk)
+        # for i in range( dHeight ):
+        #     for j in range( dWidth ):
+        #         x = (j - self.cX) / self.fX
+        #         y = (i - self.cY) / self.fY
+        #         depthAtPixel = Dk[i,j]
+        #         if(depthAtPixel != 0):
+        #             self.Vk[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
+        #             self.Vk_h[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel,1])
 
         
         ## Nk
