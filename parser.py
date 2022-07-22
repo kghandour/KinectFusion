@@ -43,8 +43,8 @@ class Parser():
 
         for i in range(self.sensor.m_depthImageHeight):
             for j in range(self.sensor.m_depthImageWidth):
-                x = (j - self.cX) / self.fX
-                y = (i - self.cY) / self.fY
+                x = (j - CamDetails.cX) / CamDetails.fX
+                y = (i - CamDetails.cY) / CamDetails.fY
                 depthAtPixel = depthMap[i, j]
                 if(depthAtPixel != -math.inf):
                     cameraSpace[i, j] = np.array(
@@ -96,15 +96,15 @@ class Parser():
             self.pyramids_so_far.append(pyramid)
             if(i==0):
                 curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, None)
-                tsdf_volume_mesh = self.tsdfVolume.visualize()
             else:
                 self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk)
                 curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume)    
                 self.Transformation_list.append(self.T_matrix)
-                tsdf_volume_mesh = self.tsdfVolume.visualize()
+            
+            tsdf_volume_mesh = self.tsdfVolume.visualize()
             self.prev_volume = curr_volume
 
-            i+=1
+            
             # exit()
             st = time.time()
             vert_pos, vert_col = self.one_loop()

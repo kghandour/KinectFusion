@@ -11,7 +11,7 @@ import time
 
 class ICPOptimizer():
 
-    def __init__(self, max_distance=1.5, num_iterations=10, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
+    def __init__(self, max_distance=0.017, num_iterations=10, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
         self.num_iterations = num_iterations
         self.max_distance = max_distance
         self.kdtree_leaf_size = kdtree_leaf_size
@@ -74,8 +74,6 @@ class ICPOptimizer():
         source_points = self.randomSample(source_points_hom, sample_rate=1)
         target_points = self.randomSample(target_points_hom, sample_rate=1)
 
-        print(source_points_hom.shape,source_noramls.shape)
-        print(target_points_hom.shape,target_normals.shape)
 
         tree = KDTree(target_points[:, :3], metric="euclidean")
 

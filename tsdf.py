@@ -113,11 +113,16 @@ class TSDFVolume:
                                                       0], volume_voxel_cordinates_used[:, 1], volume_voxel_cordinates_used[:, 2]
 
             # The old weights before integration
+            old_volume_weight_values_used = copy.deepcopy(
+                self.weight_volume[cordinates])
+
             if (prev_volume is not None):
                 old_volume_weight_values_used = prev_volume.weights_volume
                 # the old tsdf before integration
                 old_volume_tsdf_values_used = prev_volume.tsdf_volume
                 old_volume_rgb_values_used = prev_volume.rgb_volume
+            else:
+                old_volume_rgb_values_used = copy.deepcopy(self.rgb_volume[cordinates])
 
             # clamp far distances
             dist = torch.min(torch.tensor(1), r /
@@ -125,7 +130,6 @@ class TSDFVolume:
             
             rgb_used = rgbImage[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
                 1, 1)].reshape(-1, 3)[valid_depth_img_points]
-
             # Fk(p)  = ( ( Wk−1(p) * Fk−1(p) ) + ( WRk(p) * FRk(p) ) ) / ( Wk−1(p) + WRk(p))
             if (prev_volume is not None):
                 self.tsdf_volume[cordinates] = (
@@ -133,14 +137,15 @@ class TSDFVolume:
                 # Wk(p)  =Wk−1(p)+WRk(p)
                 self.weight_volume[cordinates] = torch.add(
                     weight, old_volume_weight_values_used)
-                self.rgb_volume[cordinates] = ((old_volume_weight_values_used[:, None] * old_volume_rgb_values_used) + (weight_tensor[:, None] * rgb_used)) / (
-                    (old_volume_weight_values_used+weight_tensor)[:, None])
+
 
 
             else:
                 self.tsdf_volume[cordinates] = ((dist*weight))
                 self.weight_volume[cordinates] = weight
-                self.rgb_volume[cordinates] = (weight * rgb_used)
+
+            self.rgb_volume[cordinates] = ((old_volume_weight_values_used[:, None] * old_volume_rgb_values_used) + (weight * rgb_used)) / (
+                (old_volume_weight_values_used+weight)[:, None])
 
             curr_vol = Volume(self.tsdf_volume, self.weight_volume, self.rgb_volume)
             return curr_vol

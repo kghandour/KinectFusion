@@ -2,6 +2,7 @@ import cv2
 from cv2 import destroyWindow
 import numpy as np
 from PIL import ImageOps
+from camera_sensors import CamDetails
 
 from transforms import Transforms
 
@@ -24,7 +25,6 @@ class Layer():
 
         self.Dk = []
         self.Vk = np.zeros((self.dHeight,  self.dWidth, 3))
-        self.Vk_h = np.zeros((self.dHeight,  self.dWidth, 4))
         self.Nk = np.zeros(( self.dHeight,  self.dWidth, 3))
         self.M = np.zeros((self.dHeight, self.dWidth))
 
@@ -40,14 +40,19 @@ class Layer():
         Dk = cv2.bilateralFilter(np.asarray(imgConv), 15,20,20)
         Dk = np.asarray(Dk)
 
-
         dHeight = self.dHeight
         dWidth = self.dWidth
 
         # Vk = Camera space
         
-        X, Y = np.meshgrid(dHeight, dWidth)
         self.Vk = Transforms.screen2cam(Dk)
+        # X_range = range(self.dWidth)
+        # Y_range = range(self.dHeight)
+        # X, Y = np.meshgrid(X_range, Y_range)
+        # Z = (Dk / 5000).reshape(-1, 1)
+        # X = (X.reshape(-1, 1) - CamDetails.cX) * Z / CamDetails.fX
+        # Y = (Y.reshape(-1, 1) - CamDetails.cY) * Z / CamDetails.fY
+        # self.Vk = np.hstack([X, Y, Z]).reshape(dHeight, dWidth, 3)
         # for i in range( dHeight ):
         #     for j in range( dWidth ):
         #         x = (j - self.cX) / self.fX
@@ -57,16 +62,17 @@ class Layer():
         #             self.Vk[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
         #             self.Vk_h[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel,1])
 
-        
-        ## Nk
-        ## M
+        # Nk
+        # M
         for u in range( dHeight -1): #Neighbouring
             for v in range( dWidth -1 ): #Neighbouring
-                if 0 < self.Vk[u, v, 2] < 255:
+                n = np.zeros(3, )
+                if 0 <= self.Vk[u, v, 2] <= 200:
                     n = np.cross( (self.Vk[u+1, v, :] - self.Vk[u,v,:]), self.Vk[u, v+1,:] - self.Vk[u,v,:])
-                    if(np.linalg.norm(n)!=0 and Dk[u,v]!=0):
-                        self.Nk[u, v, :] = n/np.linalg.norm(n)
-                        self.M[u,v] = 1
-
-
+                
+                if(np.linalg.norm(n)!=0 or self.depthImage[u,v]!=0):
+                    self.Nk[u, v, :] = n/np.linalg.norm(n)
+                    self.M[u,v] = 1
         ## Supposed to be HxW,3 , H,W,3 , H,W
+        # self.Vk = self.Vk[self.M == 1]
+        # self.Nk = self.Nk[self.M == 1]

@@ -20,7 +20,7 @@ class Transforms():
 
     @staticmethod
     def screen2cam(depthMap):
-        cameraSpace = np.ones((CamDetails.depthHeight, CamDetails.depthWidth,3))
+        cameraSpace = np.ones((depthMap.shape[0], depthMap.shape[1],3))
         # intermediate = torch.matmul(
         #     torch.from_numpy(depthMap[:, :2]), cameraSpace).long()
         # cameraSpace = torch.matmul(
@@ -32,8 +32,6 @@ class Transforms():
                 depthAtPixel = depthMap[i,j]
                 if(depthAtPixel != -math.inf):
                     cameraSpace[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
-                else:
-                    cameraSpace[i,j] = np.array([-math.inf, -math.inf, -math.inf])
         return cameraSpace
 
     @staticmethod
