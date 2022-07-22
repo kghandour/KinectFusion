@@ -11,7 +11,7 @@ import time
 
 class ICPOptimizer():
 
-    def __init__(self, max_distance=10, num_iterations=10, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
+    def __init__(self, max_distance=1.5, num_iterations=10, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
         self.num_iterations = num_iterations
         self.max_distance = max_distance
         self.kdtree_leaf_size = kdtree_leaf_size
@@ -31,6 +31,7 @@ class ICPOptimizer():
         return (source_normals.dot(rotation_inverse))+translation
 
     def prune_correspondences(self, source_normals, target_normals, distances):
+        print(np.max(distances))
         matches = distances <= self.max_distance
         v1_u = normalize(source_normals, norm="l2", axis=1)
         v2_u = normalize(target_normals, norm="l2", axis=1)

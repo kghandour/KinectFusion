@@ -13,5 +13,3 @@ if __name__ == "__main__":
     sensor = VirtualSensor(dataset, 1)
     parser = Parser(sensor)
     parser.process()
-
-

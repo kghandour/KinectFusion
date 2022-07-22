@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import copy
+from skimage import measure
+import open3d as o3d
 
 from volume import Volume
 
@@ -16,7 +18,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=3, origin=(0,0,0)):
+    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=5, origin=(0,0,0)):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.origin = origin
         self.min_bounds = np.asarray(min_bounds)
@@ -34,10 +36,11 @@ class TSDFVolume:
                 tuple(self.volume_size),-1, dtype=torch.float64)
             self.weight_volume = torch.zeros(
                 tuple(self.volume_size), dtype=torch.float32)
+            self.rgb_volume = torch.zeros(
+                (self.volume_size[0], self.volume_size[1], self.volume_size[2], 3), dtype=torch.float32)
 
             self.volume_voxel_indices = np.indices(
                 self.volume_size).reshape(3, -1).T
-
             volume_world_cordinates = self.min_bounds + \
                 (self.voxel_size*self.volume_voxel_indices)
             self.volume_world_cordinates = torch.cat(
@@ -55,7 +58,7 @@ class TSDFVolume:
 
     def integrate(self, depthImage, rgbImage, pose_estimation, prev_volume: Volume, weight=1):
         with torch.no_grad():
-            height, width = depthImage.shape
+            width, height = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
             depth = torch.from_numpy(depthImage)
             extrinsic_inv = torch.inverse(pose)
@@ -79,8 +82,8 @@ class TSDFVolume:
 
             volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] >= 0) &
                                                      (volume_pixel_cordinates_xy[:, 1] >= 0) &
-                                                     (volume_pixel_cordinates_xy[:, 0] < height) &
-                                                     (volume_pixel_cordinates_xy[:, 1] < width) &
+                                                     (volume_pixel_cordinates_xy[:, 0] < width) &
+                                                     (volume_pixel_cordinates_xy[:, 1] < height) &
                                                      (volume_camera_cordinates_z[:, 0] > 0), True, False
                                                      )
 
@@ -114,10 +117,14 @@ class TSDFVolume:
                 old_volume_weight_values_used = prev_volume.weights_volume
                 # the old tsdf before integration
                 old_volume_tsdf_values_used = prev_volume.tsdf_volume
+                old_volume_rgb_values_used = prev_volume.rgb_volume
 
             # clamp far distances
             dist = torch.min(torch.tensor(1), r /
                              self.trunc_distance)[valid_depth_img_points]
+            
+            rgb_used = rgbImage[volume_pixel_cordinates_xy[volume_camera_valid_pixels].split(
+                1, 1)].reshape(-1, 3)[valid_depth_img_points]
 
             # Fk(p)  = ( ( Wk−1(p) * Fk−1(p) ) + ( WRk(p) * FRk(p) ) ) / ( Wk−1(p) + WRk(p))
             if (prev_volume is not None):
@@ -126,10 +133,31 @@ class TSDFVolume:
                 # Wk(p)  =Wk−1(p)+WRk(p)
                 self.weight_volume[cordinates] = torch.add(
                     weight, old_volume_weight_values_used)
+                self.rgb_volume[cordinates] = ((old_volume_weight_values_used[:, None] * old_volume_rgb_values_used) + (weight_tensor[:, None] * rgb_used)) / (
+                    (old_volume_weight_values_used+weight_tensor)[:, None])
+
+
             else:
                 self.tsdf_volume[cordinates] = ((dist*weight))
                 self.weight_volume[cordinates] = weight
+                self.rgb_volume[cordinates] = (weight * rgb_used)
 
-            curr_vol = Volume(self.tsdf_volume, self.weight_volume)
+            curr_vol = Volume(self.tsdf_volume, self.weight_volume, self.rgb_volume)
             return curr_vol
 
+    def visualize(self):
+        vertices, triangles, vertex_normals, vals = measure.marching_cubes(
+            self.tsdf_volume.cpu().numpy(), level=None)
+        volume_cordinates = np.round(vertices).astype(int)
+        # volume indices to world coordinates
+        vertices = vertices * self.voxel_size + self.min_bounds
+
+        vertex_colors = self.rgb_volume[volume_cordinates[:, 0],
+                                        volume_cordinates[:, 1], volume_cordinates[:, 2]].cpu().numpy()
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(vertices.astype(float))
+        mesh.triangles = o3d.utility.Vector3iVector(triangles.astype(np.int32))
+        mesh.vertex_colors = o3d.utility.Vector3dVector(
+            vertex_colors.astype(np.uint8) / 255.)
+
+        return mesh
