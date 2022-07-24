@@ -20,7 +20,7 @@ class Parser():
         self.fileBaseOut = "mesh_"
         self.tsdfVolume=TSDFVolume(CamDetails.depthIntrinsics)
         self.pyramids_so_far = []
-        self.Transformation_loc2glo_list = []
+        self.Transformation_list = []
         self.T_matrix = np.eye(4)
         self.icp_optimizer = ICPOptimizer()
 
@@ -81,8 +81,8 @@ class Parser():
     def process(self):
         # vis_pcd = o3d.visualization.Visualizer()
         # vis_pcd.create_window()
-        # vis_volume = o3d.visualization.Visualizer()
-        # vis_volume.create_window()
+        vis_volume = o3d.visualization.Visualizer()
+        vis_volume.create_window()
 
         i = 0
         pcd = o3d.geometry.PointCloud()
@@ -97,10 +97,10 @@ class Parser():
             
 
             if(i==0):
-                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix)
+                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)
             else:
-                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk)
-                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix)    
+                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk, initial_pose=self.T_matrix)
+                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)    
                 self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
                 # print(world_vert)
@@ -129,6 +129,7 @@ class Parser():
             # print("Reached appending")
 
             tsdf_volume_mesh = self.tsdfVolume.visualize()
+            print(len(tsdf_volume_mesh.vertices))
             # self.prev_volume = curr_volume
 
             
@@ -139,22 +140,22 @@ class Parser():
             # # print("Time taken to process a frame ", et - st)
             # pcd.points = o3d.utility.Vector3dVector(vert_pos)
             # pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
-            # if(i == 0):
+            if(i == 0):
             #     vis_pcd.add_geometry(pcd)
-            #     # vis_volume.add_geometry(tsdf_volume_mesh)
-            # else:
+                vis_volume.add_geometry(tsdf_volume_mesh)
+            else:
             #     vis_pcd.update_geometry(pcd)
-            #     # vis_volume.update_geometry(tsdf_volume_mesh)
+                vis_volume.update_geometry(tsdf_volume_mesh)
 
             # vis_pcd.poll_events()
             # vis_pcd.update_renderer()
-            # vis_volume.poll_events()
-            # vis_volume.update_renderer()
+            vis_volume.poll_events()
+            vis_volume.update_renderer()
             i += 1
             # while(True):
             #     pass
         # vis_pcd.destroy_window()
-        # vis_volume.destroy_window()
+        vis_volume.destroy_window()
 
 
         
