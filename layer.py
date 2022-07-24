@@ -12,6 +12,7 @@ class Layer():
         self.sensor = sensor
         self.depthImage = depthImage
         self.rgbImage = np.swapaxes(rgbImage, 0,1)
+        self.rgbImageRaw = self.rgbImage
         self.dHeight = self.depthImage.size[1]
         self.dWidth = self.depthImage.size[0]
 
