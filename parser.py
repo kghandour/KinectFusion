@@ -97,32 +97,39 @@ class Parser():
             
 
             if(i==0):
-                pass
-                # curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, np.eye(4))
+                # pass
+                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, np.eye(4))
             else:
                 self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk)
-                # curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume)    
-                # self.Transformation_list.append(self.T_matrix)
-                # pcd.points = o3d.utility.Vector3dVector(pyramid['l1'].Vk)
-                # pcd.colors = o3d.utility.Vector3dVector(np.swapaxes(pyramid['l1'].rgbImage,0,1).reshape(-1,3))
-                print("ICP",self.T_matrix)
-                print("Ground", self.sensor.currentTrajectory)
+                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume)    
+                self.Transformation_list.append(self.T_matrix)
+                # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
+                # print(world_vert)
 
-                print("ICP Inv",np.linalg.inv(self.T_matrix))
-                print("Ground Inv", np.linalg.inv(self.sensor.currentTrajectory))
+
+                ### VISUALIZE CURRENT AND PREVIOUS WITH ICP OUTPUT
+                # pcd.points = o3d.utility.Vector3dVector(pyramid["l1"].Vk)
+                # pcd.colors = o3d.utility.Vector3dVector(pyramid["l1"].rgbImage/255)
+                # print("ICP",self.T_matrix)
+                # print("Ground", self.sensor.currentTrajectory)
+
+                # print("ICP Inv",np.linalg.inv(self.T_matrix))
+                # print("Ground Inv", np.linalg.inv(self.sensor.currentTrajectory))
                 # pcd2 = o3d.geometry.PointCloud()
                 # pcd2.points = o3d.utility.Vector3dVector(self.pyramids_so_far[-1]['l1'].Vk)
-                # pcd2.colors = o3d.utility.Vector3dVector(np.swapaxes(self.pyramids_so_far[-1]['l1'].rgbImage,0,1).reshape(-1,3))
-                # mesh_t = copy.deepcopy(pcd).transform(self.T_matrix)
-                # print("Copied")
+                # pcd2.colors = o3d.utility.Vector3dVector(self.pyramids_so_far[-1]["l1"].rgbImage/255)
+                # mesh_t = copy.deepcopy(pcd).transform(np.linalg.inv(self.sensor.currentTrajectory))
+                # # print("Copied")
 
-                # o3d.visualization.draw_geometries([mesh_t, pcd2])
+                # o3d.visualization.draw_geometries([pcd2, mesh_t])
                 # print("Reached Vis")
+
+                #### END VISUALIZATION
 
             self.pyramids_so_far.append(pyramid)
             # print("Reached appending")
 
-            # tsdf_volume_mesh = self.tsdfVolume.visualize()
+            tsdf_volume_mesh = self.tsdfVolume.visualize()
             # self.prev_volume = curr_volume
 
             

@@ -72,11 +72,11 @@ class ICPOptimizer():
         source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
         target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
 
-        # source_points = self.randomSample(source_points_hom, sample_rate=0.2)
-        # target_points = self.randomSample(target_points_hom, sample_rate=0.2)
+        source_points = self.randomSample(source_points_hom, sample_rate=0.1)
+        target_points = self.randomSample(target_points_hom, sample_rate=0.1)
 
-        source_points = source_points_hom
-        target_points = target_points_hom
+        # source_points = source_points_hom
+        # target_points = target_points_hom
 
 
         tree = KDTree(target_points[:, :3], metric="euclidean")
