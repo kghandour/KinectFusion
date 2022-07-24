@@ -31,7 +31,6 @@ class ICPOptimizer():
         return (source_normals.dot(rotation_inverse))+translation
 
     def prune_correspondences(self, source_normals, target_normals, distances):
-        print(np.max(distances))
         matches = distances <= self.max_distance
         v1_u = normalize(source_normals, norm="l2", axis=1)
         v2_u = normalize(target_normals, norm="l2", axis=1)
@@ -63,16 +62,21 @@ class ICPOptimizer():
 
     def estimate_pose(self, source_points, target_points, source_noramls, target_normals, initial_pose=np.eye(4), show_verbose=False):
         source_points_orig = source_points.reshape(-1,3)
-        target_points_orig = source_points.reshape(-1,3)
+        target_points_orig = target_points.reshape(-1,3)
         source_noramls = source_noramls.reshape(-1,3)
         target_normals = target_normals.reshape(-1,3)
+
+
 
 
         source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
         target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
 
-        source_points = self.randomSample(source_points_hom, sample_rate=1)
-        target_points = self.randomSample(target_points_hom, sample_rate=1)
+        # source_points = self.randomSample(source_points_hom, sample_rate=0.2)
+        # target_points = self.randomSample(target_points_hom, sample_rate=0.2)
+
+        source_points = source_points_hom
+        target_points = target_points_hom
 
 
         tree = KDTree(target_points[:, :3], metric="euclidean")
@@ -115,7 +119,7 @@ class ICPOptimizer():
             taregt_points_used = arranged_targets[matches]
             target_normals_used = arranged_target_normals[matches]
 
-            print(matches, source_points_used, taregt_points_used, target_normals_used)
+            # print(matches, source_points_used, taregt_points_used, target_normals_used)
 
             res_lsq = least_squares(self.point_to_plane_distance, np.zeros(6),
                                     args=(source_points_used, taregt_points_used, target_normals_used), method='lm', verbose=0)

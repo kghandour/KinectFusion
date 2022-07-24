@@ -5,7 +5,9 @@ class CamDetails():
     colorHeight= 480
     depthWidth = 640
     depthHeight= 480
-    colorIntrinsics = np.array([525.0, 0.0, 319.5, 0.0, 525.0, 239.5,0.0, 0.0, 1]).reshape((3,3))
+    colorIntrinsics = np.array([525.0, 0.0, 319.5,
+                                0.0, 525.0, 239.5,
+                                0.0, 0.0, 1]).reshape((3,3))
     depthIntrinsics = colorIntrinsics
     fX = depthIntrinsics[0, 0]
     fY = depthIntrinsics[1, 1]

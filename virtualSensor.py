@@ -4,6 +4,8 @@ import numpy as np
 import os
 import math
 from camera_sensors import CamDetails
+import copy
+
 
 class VirtualSensor():
     def __init__(self, dataset, increment):

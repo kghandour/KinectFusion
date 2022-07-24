@@ -11,6 +11,7 @@ from raycast import Raycast
 from layer import Layer
 from transforms import Transforms
 from tsdf import TSDFVolume
+import copy
 
 
 class Parser():
@@ -78,54 +79,76 @@ class Parser():
         return np.array(vertices_position), np.array(vertices_color)
 
     def process(self):
-        vis_pcd = o3d.visualization.Visualizer()
-        vis_pcd.create_window()
-        vis_volume = o3d.visualization.Visualizer()
-        vis_volume.create_window()
+        # vis_pcd = o3d.visualization.Visualizer()
+        # vis_pcd.create_window()
+        # vis_volume = o3d.visualization.Visualizer()
+        # vis_volume.create_window()
 
         i = 0
         pcd = o3d.geometry.PointCloud()
         while( self.sensor.processNextFrame()):
-            depthImageRaw =  self.sensor.dImage
+            depthImageRaw =  self.sensor.dImageRaw
             colorImageRaw =  self.sensor.rgbImage
-            h, w = depthImageRaw.shape
+            w,h = depthImageRaw.size
             pyramid = {}
             pyramid['l1'] = Layer(depthImageRaw, colorImageRaw, self.sensor)
-            pyramid['l2'] = Layer(cv2.resize(depthImageRaw, (int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)
-            pyramid['l3'] = Layer(cv2.resize(depthImageRaw, (int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
-            self.pyramids_so_far.append(pyramid)
+            pyramid['l2'] = Layer(depthImageRaw.resize((int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)
+            pyramid['l3'] = Layer(depthImageRaw.resize((int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
+            
+
             if(i==0):
-                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, None)
+                pass
+                # curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, np.eye(4))
             else:
                 self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk)
-                curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume)    
-                self.Transformation_list.append(self.T_matrix)
-            
-            tsdf_volume_mesh = self.tsdfVolume.visualize()
-            self.prev_volume = curr_volume
+                # curr_volume = self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImage,self.T_matrix, self.prev_volume)    
+                # self.Transformation_list.append(self.T_matrix)
+                # pcd.points = o3d.utility.Vector3dVector(pyramid['l1'].Vk)
+                # pcd.colors = o3d.utility.Vector3dVector(np.swapaxes(pyramid['l1'].rgbImage,0,1).reshape(-1,3))
+                print("ICP",self.T_matrix)
+                print("Ground", self.sensor.currentTrajectory)
+
+                print("ICP Inv",np.linalg.inv(self.T_matrix))
+                print("Ground Inv", np.linalg.inv(self.sensor.currentTrajectory))
+                # pcd2 = o3d.geometry.PointCloud()
+                # pcd2.points = o3d.utility.Vector3dVector(self.pyramids_so_far[-1]['l1'].Vk)
+                # pcd2.colors = o3d.utility.Vector3dVector(np.swapaxes(self.pyramids_so_far[-1]['l1'].rgbImage,0,1).reshape(-1,3))
+                # mesh_t = copy.deepcopy(pcd).transform(self.T_matrix)
+                # print("Copied")
+
+                # o3d.visualization.draw_geometries([mesh_t, pcd2])
+                # print("Reached Vis")
+
+            self.pyramids_so_far.append(pyramid)
+            # print("Reached appending")
+
+            # tsdf_volume_mesh = self.tsdfVolume.visualize()
+            # self.prev_volume = curr_volume
 
             
             # exit()
-            st = time.time()
-            vert_pos, vert_col = self.one_loop()
-            et = time.time()
-            print("Time taken to process a frame ", et - st)
-            pcd.points = o3d.utility.Vector3dVector(vert_pos)
-            pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
-            if(i == 0):
-                vis_pcd.add_geometry(pcd)
-                vis_volume.add_geometry(tsdf_volume_mesh)
-            else:
-                vis_pcd.update_geometry(pcd)
-                vis_volume.update_geometry(tsdf_volume_mesh)
+            # # st = time.time()
+            # # vert_pos, vert_col = self.one_loop()
+            # # et = time.time()
+            # # print("Time taken to process a frame ", et - st)
+            # pcd.points = o3d.utility.Vector3dVector(vert_pos)
+            # pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
+            # if(i == 0):
+            #     vis_pcd.add_geometry(pcd)
+            #     # vis_volume.add_geometry(tsdf_volume_mesh)
+            # else:
+            #     vis_pcd.update_geometry(pcd)
+            #     # vis_volume.update_geometry(tsdf_volume_mesh)
 
-            vis_pcd.poll_events()
-            vis_pcd.update_renderer()
-            vis_volume.poll_events()
-            vis_volume.update_renderer()
+            # vis_pcd.poll_events()
+            # vis_pcd.update_renderer()
+            # vis_volume.poll_events()
+            # vis_volume.update_renderer()
             i += 1
-        vis_pcd.destroy_window()
-        vis_volume.destroy_window()
+            # while(True):
+            #     pass
+        # vis_pcd.destroy_window()
+        # vis_volume.destroy_window()
 
 
         
