@@ -107,9 +107,9 @@ class Parser():
                 tsdfMesh, normals= self.tsdfVolume.visualize()
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
                 self.tsdf_normals = np.asarray(normals)
-                
-                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
-                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)    
+
+                # self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk, initial_pose=self.T_matrix)
+                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double))    
             #     self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
                 # print(world_vert)
@@ -135,18 +135,28 @@ class Parser():
                 #### END VISUALIZATION
 
             # print("Reached appending")
+            i += 1
 
+            if(config.getVisualizeBool()):
+                if(i == 5):
+                    print("entered")
+                    tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
+                    o3d.visualization.draw_geometries([tsdf_volume_mesh])
+                    while(True):
+                        pass
             if(config.getVisualizeTSDFBool()):
-                tsdf_volume_mesh = self.tsdfVolume.visualize()
-                if(i == 0):
+                if(i==0):
                     vis_volume.add_geometry(tsdf_volume_mesh)
                 else:
+                    continue
                     vis_volume.update_geometry(tsdf_volume_mesh)
-                vis_volume.poll_events()
-                vis_volume.update_renderer()
+                    vis_volume.poll_events()
+                    vis_volume.update_renderer()
+                    vis_volume.destroy_window()
+
+
             # self.prev_volume = curr_volume
 
-            
             # exit()
             # # st = time.time()
             # # vert_pos, vert_col = self.one_loop()
@@ -159,11 +169,9 @@ class Parser():
             # vis_pcd.poll_events()
             # vis_pcd.update_renderer()
             
-            i += 1
             # while(True):
             #     pass
         # vis_pcd.destroy_window()
-        vis_volume.destroy_window()
 
 
         
