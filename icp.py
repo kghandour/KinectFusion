@@ -61,10 +61,6 @@ class ICPOptimizer():
         return vertex_samples
 
     def estimate_pose(self, source_points, target_points, source_noramls, target_normals, initial_pose=np.eye(4), show_verbose=False):
-        print(source_points.shape)
-        print(target_points.shape)
-        print(source_noramls.shape)
-        print(target_normals.shape)
         
         source_points_orig = source_points.reshape(-1,3)
         target_points_orig = target_points.reshape(-1,3)

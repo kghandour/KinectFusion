@@ -16,7 +16,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=5):
+    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.01, margin=5):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -27,7 +27,7 @@ class TSDFVolume:
 
         self.volume_size = np.ceil(
             (self.max_bounds-self.min_bounds)/self.voxel_size).astype(int)
-
+        
         with torch.no_grad():
             self.tsdf_volume = torch.ones(
                 tuple(self.volume_size), dtype=torch.float64)
@@ -143,5 +143,8 @@ class TSDFVolume:
         mesh.triangles = o3d.utility.Vector3iVector(triangles.astype(np.int32))
         mesh.vertex_colors = o3d.utility.Vector3dVector(
             vertex_colors.astype(np.uint8) / 255.)
+        mesh.compute_vertex_normals()
 
-        return mesh
+        normals = mesh.vertex_normals
+
+        return mesh, normals

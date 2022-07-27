@@ -1,4 +1,5 @@
 import os
+from statistics import NormalDist
 import numpy as np
 import math
 import open3d as o3d
@@ -13,6 +14,7 @@ from transforms import Transforms
 from tsdf import TSDFVolume
 import copy
 from config import config
+import torch
 
 class Parser():
     def __init__(self,  sensor):
@@ -102,7 +104,11 @@ class Parser():
             if(i==0):
                 self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)
             else:
-                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk, initial_pose=self.T_matrix)
+                tsdfMesh, normals= self.tsdfVolume.visualize()
+                self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
+                self.tsdf_normals = np.asarray(normals)
+                
+                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
                 self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)    
             #     self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
