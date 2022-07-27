@@ -81,14 +81,14 @@ class Parser():
     def process(self):
         # vis_pcd = o3d.visualization.Visualizer()
         # vis_pcd.create_window()
+        i = 0
 
-        if(config.getVisualizeBool()):
+        
+
+        if(config.getVisualizeTSDFBool() and i==0):
             vis_volume = o3d.visualization.Visualizer()
             vis_volume.create_window()
-            pcd = o3d.geometry.PointCloud()
 
-        i = 0
-        
         while( self.sensor.processNextFrame()):
             depthImageRaw =  self.sensor.dImageRaw
             colorImageRaw =  self.sensor.rgbImage
@@ -104,11 +104,11 @@ class Parser():
             else:
                 self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk, initial_pose=self.T_matrix)
                 self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)    
-                self.Transformation_list.append(self.T_matrix)
+            #     self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
                 # print(world_vert)
 
-
+            self.pyramids_so_far.append(pyramid)
                 ### VISUALIZE CURRENT AND PREVIOUS WITH ICP OUTPUT
                 # pcd.points = o3d.utility.Vector3dVector(pyramid["l1"].Vk)
                 # pcd.colors = o3d.utility.Vector3dVector(pyramid["l1"].rgbImage/255)
@@ -128,11 +128,16 @@ class Parser():
 
                 #### END VISUALIZATION
 
-            self.pyramids_so_far.append(pyramid)
             # print("Reached appending")
 
-            tsdf_volume_mesh = self.tsdfVolume.visualize()
-            print(len(tsdf_volume_mesh.vertices))
+            if(config.getVisualizeTSDFBool()):
+                tsdf_volume_mesh = self.tsdfVolume.visualize()
+                if(i == 0):
+                    vis_volume.add_geometry(tsdf_volume_mesh)
+                else:
+                    vis_volume.update_geometry(tsdf_volume_mesh)
+                vis_volume.poll_events()
+                vis_volume.update_renderer()
             # self.prev_volume = curr_volume
 
             
@@ -143,17 +148,11 @@ class Parser():
             # # print("Time taken to process a frame ", et - st)
             # pcd.points = o3d.utility.Vector3dVector(vert_pos)
             # pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
-            if(i == 0):
-            #     vis_pcd.add_geometry(pcd)
-                vis_volume.add_geometry(tsdf_volume_mesh)
-            else:
-            #     vis_pcd.update_geometry(pcd)
-                vis_volume.update_geometry(tsdf_volume_mesh)
+            
 
             # vis_pcd.poll_events()
             # vis_pcd.update_renderer()
-            vis_volume.poll_events()
-            vis_volume.update_renderer()
+            
             i += 1
             # while(True):
             #     pass

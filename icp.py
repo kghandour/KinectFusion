@@ -7,7 +7,7 @@ import open3d as o3d
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation as R
 import time
-
+from config import config
 
 class ICPOptimizer():
 
@@ -61,6 +61,11 @@ class ICPOptimizer():
         return vertex_samples
 
     def estimate_pose(self, source_points, target_points, source_noramls, target_normals, initial_pose=np.eye(4), show_verbose=False):
+        print(source_points.shape)
+        print(target_points.shape)
+        print(source_noramls.shape)
+        print(target_normals.shape)
+        
         source_points_orig = source_points.reshape(-1,3)
         target_points_orig = target_points.reshape(-1,3)
         source_noramls = source_noramls.reshape(-1,3)
@@ -82,12 +87,14 @@ class ICPOptimizer():
         tree = KDTree(target_points[:, :3], metric="euclidean")
 
         pose_estimation = copy.deepcopy(initial_pose)
-        print("-------------------------------------------")
-        print("ICP starting with : ")
-        print("Number of Iterations : {}".format(self.num_iterations))
-        print("Number of Source Points : {}".format(source_points.shape[0]))
-        print("Number of Target Points : {}".format(target_points.shape[0]))
-        print("Initial Pose : {}".format(initial_pose))
+
+        if(config.getDebug()):
+            print("-------------------------------------------")
+            print("ICP starting with : ")
+            print("Number of Iterations : {}".format(self.num_iterations))
+            print("Number of Source Points : {}".format(source_points.shape[0]))
+            print("Number of Target Points : {}".format(target_points.shape[0]))
+            print("Initial Pose : {}".format(initial_pose))
         # print("-------------------------------------------")
 
         icp_start_time = time.time()

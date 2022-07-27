@@ -23,7 +23,6 @@ class Layer():
         self.dWidth = self.depthImage.size[0]
 
         self.Dk = []
-        self.M = np.zeros((self.dWidth, self.dHeight))
 
         self.compNormalsVerticesAndMask()
 
@@ -44,9 +43,10 @@ class Layer():
         # Vk = Camera space
 
         self.Vk = Transforms.screen2cam(self.Dk, vis_3d=False)
+        
         # Nk
         # M
-        self.Nk = Layer.normals(self.dWidth, self.dHeight, np.array(self.Vk, dtype=np.float32))        ## Supposed to be HxW,3 , H,W,3 , H,W
+        self.Nk, self.M = Layer.normals(self.dWidth, self.dHeight, np.array(self.Vk, dtype=np.float32))        ## Supposed to be HxW,3 , H,W,3 , H,W
         self.Vk = self.Vk[self.M == 1].reshape(-1,3)
         self.Nk = self.Nk[self.M == 1].reshape(-1,3)
         self.rgbImage = self.rgbImage[self.M == 1].reshape(-1,3)
@@ -56,6 +56,8 @@ class Layer():
     @jit(nopython=True)
     def normals(w:int, h:int, Vk):
         Nk = np.zeros(( w,  h, 3), dtype=np.float32)
+        M = np.zeros((w, h))
+        Vk = Vk*255
         for u in range( w-1 ): #Neighbouring
             for v in range( h-1  ): #Neighbouring
                 n = np.zeros((3, ), dtype=np.float32)
@@ -63,4 +65,5 @@ class Layer():
                     n = np.cross((Vk[u+1, v,:] - Vk[u,v,:]), Vk[u, v+1,:] - Vk[u,v,:])
                 if(np.linalg.norm(n)!=0):
                     Nk[u, v, :] = n/np.linalg.norm(n)
-        return Nk
+                    M[u,v] = 1
+        return Nk, M

@@ -47,11 +47,9 @@ class TSDFVolume:
 
     def integrate(self, depthImage, rgbImage, pose_estimation, weight=1):
         with torch.no_grad():
-            depthImage = np.array(depthImage)
-            print(depthImage.shape)
+            depthImage = np.swapaxes(np.array(depthImage),0,1)
             rgbImage = np.swapaxes(rgbImage,0,1)
-            print(rgbImage.shape)
-            height, width = depthImage.shape
+            height, width, _ = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
             depth = torch.from_numpy(depthImage)
             extrinsic_inv = torch.inverse(pose)

@@ -63,6 +63,7 @@ class Transforms():
             pcd.points = o3d.utility.Vector3dVector(cameraSpace.reshape(-1,3))
             o3d.visualization.draw_geometries([pcd])
             exit()
+            
         return cameraSpace
 
     @staticmethod

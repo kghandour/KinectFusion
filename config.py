@@ -4,7 +4,8 @@ class config():
     _torchDevice = None
     _visualize = False
     _visualizeTSDF = False
-    
+    _debug = False
+
     @staticmethod
     def getTorchDevice():
         return config._torchDevice
@@ -17,6 +18,9 @@ class config():
     def getVisualizeTSDFBool():
         return config._visualizeTSDF
 
+    def getDebug():
+        return config._debug
+
     @staticmethod
     def setTorchDevice(device):
         config._torchDevice = device
@@ -28,3 +32,7 @@ class config():
     @staticmethod
     def setVisualizeTSDF(vis_tsdf):
         config._visualizeTSDF = vis_tsdf
+
+    @staticmethod
+    def setDebug(debug):
+        config._debug = debug
