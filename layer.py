@@ -2,9 +2,12 @@ import cv2
 from cv2 import destroyWindow
 import numpy as np
 from PIL import ImageOps, Image
+from sympy import true
 from camera_sensors import CamDetails
 
 from transforms import Transforms
+from torchvision import transforms
+import torch
 
 
 class Layer():
@@ -15,14 +18,6 @@ class Layer():
         self.rgbImageRaw = self.rgbImage
         self.dHeight = self.depthImage.size[1]
         self.dWidth = self.depthImage.size[0]
-
-
-        depthIntrinsics =  self.sensor.m_depthIntrinsics
-        self.fX = depthIntrinsics[0, 0]
-        self.fY = depthIntrinsics[1, 1]
-        self.cX = depthIntrinsics[0, 2]
-        self.cY = depthIntrinsics[1, 2]
-
 
         self.Dk = []
         self.Vk = np.zeros((self.dWidth,  self.dHeight, 3))
@@ -37,14 +32,18 @@ class Layer():
 
         ## Dk  --------
         ##TODO: Make sure if Depth must be divided by 5000 or not. I normalized the depth directly to 255 instead of dividing by 5000
-        normalize = np.array(self.depthImage)/72
+        depth_arr = np.array(self.depthImage)
+        normalize = np.array(self.depthImage)/np.max(self.depthImage)*255
         image = Image.fromarray(normalize)
         imgConv = ImageOps.grayscale(image)
         Dk = cv2.bilateralFilter(np.asarray(imgConv), 15,20,20)
-        self.Dk = np.transpose(np.asarray(Dk))
+        transform_toTensor = transforms.ToTensor()
+
+        self.Dk = transform_toTensor(Dk).permute(2,1,0)
         # Vk = Camera space
 
-        self.Vk = Transforms.screen2cam(self.Dk)
+        self.Vk = Transforms.screen2cam(self.Dk, vis_3d=False)
+
         # X_range = range(self.dWidth)
         # Y_range = range(self.dHeight)
         # X, Y = np.meshgrid(X_range, Y_range)

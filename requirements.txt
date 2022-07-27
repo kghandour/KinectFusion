@@ -1,7 +1,7 @@
-matplotlib==3.5.1
-numpy==1.22.3
-pandas==1.4.1
-Pillow==9.0.1
+matplotlib
+numpy
+pandas
+Pillow
 scipy
 ipython
 jupyter
@@ -14,3 +14,4 @@ opencv-python
 open3d
 scikit-image
 argparse
+torchvision

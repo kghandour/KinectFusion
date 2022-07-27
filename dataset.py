@@ -3,6 +3,8 @@ import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
 import torch
+import config
+
 
 
 class Dataset():
@@ -37,6 +39,7 @@ class Dataset():
         
 
     def preprocess(self, directory):
+        print(config.getTorchDevice())
         depth_file = open(self.depth_path, "r")
         rgb_file = open(self.rgb_path, "r")
         groundtruth_file = open(self.groundtruth_path, "r")
@@ -84,12 +87,12 @@ class Dataset():
             
             self.trajectory_timestamps.append(trajectory_split[0])
             temp_traj = trajectory_split[1:]
-            trajMatrix = torch.identity(4)
-            trajMatrix[0,3] = temp_traj[0]
-            trajMatrix[1,3] = temp_traj[1]
-            trajMatrix[2,3] = temp_traj[2]
+            trajMatrix = torch.eye(4)
+            trajMatrix[0,3] = float(temp_traj[0])
+            trajMatrix[1,3] = float(temp_traj[1])
+            trajMatrix[2,3] = float(temp_traj[2])
             rotMatrix = R.from_quat(temp_traj[3:]).as_matrix()
-            trajMatrix[0:3,0:3] = rotMatrix
+            trajMatrix[0:3,0:3] = torch.from_numpy(rotMatrix)
             if(np.linalg.norm(rotMatrix)==0):
                 break
 

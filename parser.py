@@ -12,8 +12,7 @@ from layer import Layer
 from transforms import Transforms
 from tsdf import TSDFVolume
 import copy
-
-from main import getTorchDevice, getVisualize, getVisualizeTSDF
+import config
 
 class Parser():
     def __init__(self,  sensor):
@@ -83,7 +82,7 @@ class Parser():
         # vis_pcd = o3d.visualization.Visualizer()
         # vis_pcd.create_window()
 
-        if(getVisualize()):
+        if(config.getVisualizeBool()):
             vis_volume = o3d.visualization.Visualizer()
             vis_volume.create_window()
             pcd = o3d.geometry.PointCloud()
@@ -93,7 +92,7 @@ class Parser():
         while( self.sensor.processNextFrame()):
             depthImageRaw =  self.sensor.dImageRaw
             colorImageRaw =  self.sensor.rgbImage
-            w,h = depthImageRaw.size
+            w,h = depthImageRaw.size[0], depthImageRaw.size[1]
             pyramid = {}
             pyramid['l1'] = Layer(depthImageRaw, colorImageRaw, self.sensor)
             pyramid['l2'] = Layer(depthImageRaw.resize((int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)

@@ -2,6 +2,9 @@
 import torch
 import numpy as np
 import math
+import open3d as o3d
+import config
+import time
 
 from camera_sensors import CamDetails
 class Transforms():
@@ -19,31 +22,52 @@ class Transforms():
         return worldSpace
 
     @staticmethod
-    def screen2cam(depthMap):
+    def screen2cam(depthMap, vis_3d=False):
+        st = time.time()
         cameraSpace = torch.ones((depthMap.shape[0], depthMap.shape[1],3))
+        cameraSpace.to(config.getTorchDevice())
         # intermediate = torch.matmul(
         #     torch.from_numpy(depthMap[:, :2]), cameraSpace).long()
         # cameraSpace = torch.matmul(
         #     intermediate[:, :3], np.linalg.inv(CamDetails.depthIntrinsics).T)
-        X_range = range(depthMap.shape[0])
-        Y_range = range(depthMap.shape[1])
         
-        X,Y  = torch.meshgrid(range(depthMap.shape[0]), range(depthMap.shape[1]))
-        print(X.shape, Y.shape)
+        
+        
+        ## Using torch
+        X_range = torch.arange(0,depthMap.shape[0])
+        Y_range = torch.arange(0,depthMap.shape[1])
+        X,Y  = torch.meshgrid((X_range, Y_range), indexing='ij')
+        X.to(config.getTorchDevice())
+        Y.to(config.getTorchDevice())
+        
+
         Z = (depthMap).reshape(-1, 1)
+        Z.to(config.getTorchDevice())
+
         X = (X.reshape(-1, 1) - CamDetails.cX) * Z / CamDetails.fX
         Y = (Y.reshape(-1, 1) - CamDetails.cY) * Z / CamDetails.fY
         cameraSpace = torch.hstack([X, Y, Z]).reshape(depthMap.shape[0], depthMap.shape[1], 3)
-        
+
+       
 
         
+        ## Using loops
         # for i in range(depthMap.shape[0]):
         #     for j in range(depthMap.shape[1]):
         #         x = (i - CamDetails.cX) / CamDetails.fX
         #         y = (j - CamDetails.cY) / CamDetails.fY
         #         depthAtPixel = depthMap[i,j]
         #         if(depthAtPixel != -math.inf):
-        #             cameraSpace[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
+        #             cameraSpace[i,j] = torch.tensor([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
+
+        et = time.time()
+        print("Time taken to process a frame ", et - st)
+
+        if(vis_3d):
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(cameraSpace.reshape(-1,3))
+            o3d.visualization.draw_geometries([pcd])
+            exit()
         return cameraSpace
 
     @staticmethod
