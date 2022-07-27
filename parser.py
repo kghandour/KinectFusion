@@ -13,6 +13,7 @@ from transforms import Transforms
 from tsdf import TSDFVolume
 import copy
 
+from main import getTorchDevice, getVisualize, getVisualizeTSDF
 
 class Parser():
     def __init__(self,  sensor):
@@ -81,11 +82,14 @@ class Parser():
     def process(self):
         # vis_pcd = o3d.visualization.Visualizer()
         # vis_pcd.create_window()
-        vis_volume = o3d.visualization.Visualizer()
-        vis_volume.create_window()
+
+        if(getVisualize()):
+            vis_volume = o3d.visualization.Visualizer()
+            vis_volume.create_window()
+            pcd = o3d.geometry.PointCloud()
 
         i = 0
-        pcd = o3d.geometry.PointCloud()
+        
         while( self.sensor.processNextFrame()):
             depthImageRaw =  self.sensor.dImageRaw
             colorImageRaw =  self.sensor.rgbImage

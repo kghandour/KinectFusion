@@ -20,7 +20,7 @@ class Transforms():
 
     @staticmethod
     def screen2cam(depthMap):
-        cameraSpace = np.ones((depthMap.shape[0], depthMap.shape[1],3))
+        cameraSpace = torch.ones((depthMap.shape[0], depthMap.shape[1],3))
         # intermediate = torch.matmul(
         #     torch.from_numpy(depthMap[:, :2]), cameraSpace).long()
         # cameraSpace = torch.matmul(
@@ -28,21 +28,22 @@ class Transforms():
         X_range = range(depthMap.shape[0])
         Y_range = range(depthMap.shape[1])
         
-        # X,Y  = np.meshgrid(range(depthMap.shape[0]), range(depthMap.shape[1]))
-        # print(X.shape, Y.shape)
-        # Z = (depthMap).reshape(-1, 1)
-        # X = (X.reshape(-1, 1) - CamDetails.cX) * Z / CamDetails.fX
-        # Y = (Y.reshape(-1, 1) - CamDetails.cY) * Z / CamDetails.fY
-        # cameraSpace = np.hstack([X, Y, Z]).reshape(depthMap.shape[0], depthMap.shape[1], 3)
+        X,Y  = torch.meshgrid(range(depthMap.shape[0]), range(depthMap.shape[1]))
+        print(X.shape, Y.shape)
+        Z = (depthMap).reshape(-1, 1)
+        X = (X.reshape(-1, 1) - CamDetails.cX) * Z / CamDetails.fX
+        Y = (Y.reshape(-1, 1) - CamDetails.cY) * Z / CamDetails.fY
+        cameraSpace = torch.hstack([X, Y, Z]).reshape(depthMap.shape[0], depthMap.shape[1], 3)
         
+
         
-        for i in range(depthMap.shape[0]):
-            for j in range(depthMap.shape[1]):
-                x = (i - CamDetails.cX) / CamDetails.fX
-                y = (j - CamDetails.cY) / CamDetails.fY
-                depthAtPixel = depthMap[i,j]
-                if(depthAtPixel != -math.inf):
-                    cameraSpace[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
+        # for i in range(depthMap.shape[0]):
+        #     for j in range(depthMap.shape[1]):
+        #         x = (i - CamDetails.cX) / CamDetails.fX
+        #         y = (j - CamDetails.cY) / CamDetails.fY
+        #         depthAtPixel = depthMap[i,j]
+        #         if(depthAtPixel != -math.inf):
+        #             cameraSpace[i,j] = np.array([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
         return cameraSpace
 
     @staticmethod

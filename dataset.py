@@ -2,6 +2,7 @@ import os
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
+import torch
 
 
 class Dataset():
@@ -83,7 +84,7 @@ class Dataset():
             
             self.trajectory_timestamps.append(trajectory_split[0])
             temp_traj = trajectory_split[1:]
-            trajMatrix = np.identity(4)
+            trajMatrix = torch.identity(4)
             trajMatrix[0,3] = temp_traj[0]
             trajMatrix[1,3] = temp_traj[1]
             trajMatrix[2,3] = temp_traj[2]
@@ -92,5 +93,5 @@ class Dataset():
             if(np.linalg.norm(rotMatrix)==0):
                 break
 
-            trajInverse = np.linalg.inv(trajMatrix)
+            trajInverse = torch.linalg.inv(trajMatrix)
             self.trajectory.append(trajInverse)
