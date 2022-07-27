@@ -1,24 +1,30 @@
-import torch
 
+class config():
 
-_torchDevice = None
-_visualize = False
-_visualizeTSDF = False
+    _torchDevice = None
+    _visualize = False
+    _visualizeTSDF = False
+    
+    @staticmethod
+    def getTorchDevice():
+        return config._torchDevice
 
-def getTorchDevice():
-    return _torchDevice
+    @staticmethod
+    def getVisualizeBool():
+        return config._visualize
 
-def getVisualizeBool():
-    return _visualize
+    @staticmethod
+    def getVisualizeTSDFBool():
+        return config._visualizeTSDF
 
-def getVisualizeTSDFBool():
-    return _visualizeTSDF
+    @staticmethod
+    def setTorchDevice(device):
+        config._torchDevice = device
 
-def setTorchDevice(device):
-    _torchDevice = device
+    @staticmethod
+    def setVisualize(vis):
+        config._visualize = vis
 
-def setVisualize(vis):
-    _visualize = vis
-
-def setVisualizeTSDF(vis_tsdf):
-    _visualizeTSDF = vis_tsdf
+    @staticmethod
+    def setVisualizeTSDF(vis_tsdf):
+        config._visualizeTSDF = vis_tsdf

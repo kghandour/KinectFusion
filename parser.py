@@ -12,7 +12,7 @@ from layer import Layer
 from transforms import Transforms
 from tsdf import TSDFVolume
 import copy
-import config
+from config import config
 
 class Parser():
     def __init__(self,  sensor):
@@ -95,8 +95,8 @@ class Parser():
             w,h = depthImageRaw.size[0], depthImageRaw.size[1]
             pyramid = {}
             pyramid['l1'] = Layer(depthImageRaw, colorImageRaw, self.sensor)
-            pyramid['l2'] = Layer(depthImageRaw.resize((int(w/2), int(h/2))), cv2.resize(colorImageRaw, (int(w/2), int(h/2))), self.sensor)
-            pyramid['l3'] = Layer(depthImageRaw.resize((int(w/4), int(h/4))), cv2.resize(colorImageRaw, (int(w/4), int(h/4))), self.sensor)
+            pyramid['l2'] = Layer(depthImageRaw.resize((int(w/2), int(h/2))), colorImageRaw.resize((int(w/2), int(h/2))), self.sensor)
+            pyramid['l3'] = Layer(depthImageRaw.resize((int(w/4), int(h/4))), colorImageRaw.resize((int(w/4), int(h/4))), self.sensor)
             
 
             if(i==0):

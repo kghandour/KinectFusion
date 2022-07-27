@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import math
 import open3d as o3d
-import config
+from config import config
 import time
 
 from camera_sensors import CamDetails
@@ -23,7 +23,6 @@ class Transforms():
 
     @staticmethod
     def screen2cam(depthMap, vis_3d=False):
-        st = time.time()
         cameraSpace = torch.ones((depthMap.shape[0], depthMap.shape[1],3))
         cameraSpace.to(config.getTorchDevice())
         # intermediate = torch.matmul(
@@ -32,23 +31,20 @@ class Transforms():
         #     intermediate[:, :3], np.linalg.inv(CamDetails.depthIntrinsics).T)
         
         
-        
+        st = time.time()
         ## Using torch
         X_range = torch.arange(0,depthMap.shape[0])
         Y_range = torch.arange(0,depthMap.shape[1])
         X,Y  = torch.meshgrid((X_range, Y_range), indexing='ij')
-        X.to(config.getTorchDevice())
-        Y.to(config.getTorchDevice())
         
 
         Z = (depthMap).reshape(-1, 1)
-        Z.to(config.getTorchDevice())
 
         X = (X.reshape(-1, 1) - CamDetails.cX) * Z / CamDetails.fX
         Y = (Y.reshape(-1, 1) - CamDetails.cY) * Z / CamDetails.fY
         cameraSpace = torch.hstack([X, Y, Z]).reshape(depthMap.shape[0], depthMap.shape[1], 3)
 
-       
+
 
         
         ## Using loops
@@ -60,8 +56,7 @@ class Transforms():
         #         if(depthAtPixel != -math.inf):
         #             cameraSpace[i,j] = torch.tensor([x*depthAtPixel, y*depthAtPixel, depthAtPixel])
 
-        et = time.time()
-        print("Time taken to process a frame ", et - st)
+
 
         if(vis_3d):
             pcd = o3d.geometry.PointCloud()

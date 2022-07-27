@@ -6,7 +6,7 @@ import os
 from parser import Parser
 import torch
 import argparse
-import config
+from config import config
 
 
 argparser= argparse.ArgumentParser(description='Parser Arguments for KinectFusion')
@@ -29,9 +29,10 @@ def checkTorchDevice():
 
 
 if __name__ == "__main__":
-    config.torchDevice = checkTorchDevice()
-    config.visualize = visualize
-    config.visualizeTSDF = visualizeTSDF
+    config.setTorchDevice(checkTorchDevice())
+    config.setVisualize(visualize)
+    config.setVisualizeTSDF(visualizeTSDF)
+
     # Assumes the same file structure as the exercises. Meaning before the Exercises/KinectFusion/main.py
     # Dataset folder will be in Exercises/Data/
     dataset = Dataset("rgbd_dataset_freiburg1_xyz") 

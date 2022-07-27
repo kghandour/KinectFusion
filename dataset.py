@@ -3,7 +3,7 @@ import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
 import torch
-import config
+from config import config
 
 
 
@@ -39,7 +39,6 @@ class Dataset():
         
 
     def preprocess(self, directory):
-        print(config.getTorchDevice())
         depth_file = open(self.depth_path, "r")
         rgb_file = open(self.rgb_path, "r")
         groundtruth_file = open(self.groundtruth_path, "r")
