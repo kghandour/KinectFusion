@@ -17,7 +17,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.01, margin=5):
+    def __init__(self, camera_intrinsics, min_bounds=[-3.2, -3.2, -3.2], max_bounds=[3.2, 3.2, 3.2], voxel_size=0.02, margin=2):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -54,6 +54,7 @@ class TSDFVolume:
             pose = torch.from_numpy(pose_estimation)
             depth = torch.from_numpy(depthImage)
             extrinsic_inv = torch.inverse(pose)
+
 
             # Convert volume world cordinates to camera cordinates
             volume_camera_cordinates = torch.matmul(

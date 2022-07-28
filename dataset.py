@@ -30,7 +30,9 @@ class Dataset():
         groundtruth_file = open(self.groundtruth_path, "r")
 
         self.number_frames = sum(1 for line in depth_file)
-        if(self.number_frames != sum(1 for line in rgb_file)):
+        self.rgb_number_frames = sum(1 for line in rgb_file)
+        if(self.number_frames != self.rgb_number_frames):
+            print(self.number_frames, self.rgb_number_frames)
             raise Exception("Depth and Color files frames do not match. Please make sure that they have the same number of lines")
 
         depth_file.close()

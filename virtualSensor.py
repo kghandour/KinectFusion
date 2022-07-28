@@ -7,6 +7,7 @@ import os
 import math
 from camera_sensors import CamDetails
 import copy
+from tqdm import tqdm
 
 
 
@@ -38,16 +39,19 @@ class VirtualSensor():
         self.m_depthFrame = torch.full((self.m_depthImageWidth, self.m_depthImageHeight), 0.5)
         self.m_colorFrame = torch.full((self.m_colorImageWidth, self.m_colorImageHeight),255)
 
-    def processNextFrame(self):
+    def processNextFrame(self, pbar=None):
         if(self.currentIdx==-1):
             self.currentIdx =0
         else:
             self.currentIdx += self.increment
 
+
         if(self.currentIdx>=len(self.rgb_images_path)):
             return False
         
-        print("ProcessNextFrame "+str(self.currentIdx)+" | " + str(len((self.rgb_images_path))))
+        if ( pbar is not None):
+            pbar.update(1)
+        # print("ProcessNextFrame "+str(self.currentIdx)+" | " + str(len((self.rgb_images_path))))
 
         transform_toTensor = transforms.ToTensor()
         self.rgbImage = Image.open(os.path.join(self.kinect_dataset_path,self.rgb_images_path[self.currentIdx]))

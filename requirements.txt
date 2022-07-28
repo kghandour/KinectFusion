@@ -15,3 +15,5 @@ open3d
 scikit-image
 argparse
 torchvision
+tqdm
+numba

@@ -15,6 +15,7 @@ from tsdf import TSDFVolume
 import copy
 from config import config
 import torch
+from tqdm import tqdm
 
 class Parser():
     def __init__(self,  sensor):
@@ -90,8 +91,8 @@ class Parser():
         if(config.getVisualizeTSDFBool() and i==0):
             vis_volume = o3d.visualization.Visualizer()
             vis_volume.create_window()
-
-        while( self.sensor.processNextFrame()):
+        pbar = tqdm(total=len(self.sensor.rgb_images_path), mininterval=1)
+        while( self.sensor.processNextFrame(pbar)):
             depthImageRaw =  self.sensor.dImageRaw
             colorImageRaw =  self.sensor.rgbImage
             w,h = depthImageRaw.size[0], depthImageRaw.size[1]
@@ -102,7 +103,7 @@ class Parser():
             
 
             if(i==0):
-                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,self.T_matrix)
+                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double))
             else:
                 tsdfMesh, normals= self.tsdfVolume.visualize()
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
@@ -135,10 +136,10 @@ class Parser():
                 #### END VISUALIZATION
 
             # print("Reached appending")
-            i += 1
+            i += self.sensor.increment
 
             if(config.getVisualizeBool()):
-                if(i == 5):
+                if(i >= 60):
                     print("entered")
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
                     o3d.visualization.draw_geometries([tsdf_volume_mesh])
@@ -171,6 +172,7 @@ class Parser():
             
             # while(True):
             #     pass
+        pbar.close()
         # vis_pcd.destroy_window()
 
 
