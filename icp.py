@@ -41,7 +41,6 @@ class ICPOptimizer():
 
     @staticmethod
     def point_to_plane_distance(X, SP, TP, TN):
-
         A = np.identity(4)
         rotation_matrix = R.from_mrp(
             [X[0], X[1], X[2]]).as_matrix()

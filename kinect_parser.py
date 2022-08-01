@@ -120,12 +120,12 @@ class KinectParser():
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
                 self.tsdf_normals = np.asarray(normals)
 
-                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
+                # self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
                 
                 ## Ground truth
-                # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=0.9)    
+                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=0.9)    
                 ## ICP
-                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix, weight=1)
+                # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix, weight=1)
 
             #     self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
@@ -155,7 +155,7 @@ class KinectParser():
             i += self.sensor.increment
 
             if(config.getVisualizeBool()):
-                if(i >= 2):
+                if(i >= 797):
                     print("entered")
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
                     o3d.io.write_triangle_mesh("mesh_out/output.ply", tsdf_volume_mesh)
