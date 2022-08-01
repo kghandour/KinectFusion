@@ -1,5 +1,6 @@
 import os
 from statistics import NormalDist
+from cv2 import resize
 import numpy as np
 import math
 import open3d as o3d
@@ -16,6 +17,7 @@ import copy
 from config import config
 import torch
 from tqdm import tqdm
+from torchvision import transforms
 
 class KinectParser():
     def __init__(self,  sensor):
@@ -93,24 +95,38 @@ class KinectParser():
             vis_volume.create_window()
         pbar = tqdm(total=len(self.sensor.rgb_images_path), mininterval=1)
         while( self.sensor.processNextFrame(pbar)):
-            depthImageRaw =  self.sensor.dImageRaw
+            depthImage = self.sensor.dImage
+            # depthImageRaw =  self.sensor.dImageRaw
             colorImageRaw =  self.sensor.rgbImage
-            w,h = depthImageRaw.size[0], depthImageRaw.size[1]
+            w,h,_ = depthImage.shape
             pyramid = {}
-            pyramid['l1'] = Layer(depthImageRaw, colorImageRaw, self.sensor)
-            pyramid['l2'] = Layer(depthImageRaw.resize((int(w/2), int(h/2))), colorImageRaw.resize((int(w/2), int(h/2))), self.sensor)
-            pyramid['l3'] = Layer(depthImageRaw.resize((int(w/4), int(h/4))), colorImageRaw.resize((int(w/4), int(h/4))), self.sensor)
+            # resize2 = transforms.functional.resize(size=[w/2,h/2])
+            # resize3 = transforms.Resize((0.5))
+            
+            pyramid['l1'] = Layer(depthImage, colorImageRaw, self.sensor)
+            # pyramid['l2'] = Layer(torch.nn.functional.interpolate(depthImage.permute(2,1,0),size=(w/2,h/2)).permute(2,1,0), colorImageRaw.resize((int(w/2), int(h/2))), self.sensor)
+            # pyramid['l3'] = Layer(resize3(depthImage), colorImageRaw.resize((int(w/4), int(h/4))), self.sensor)
             
 
             if(i==0):
-                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=1)
+                ## Ground truth
+                # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=1)
+                
+                ## ICP
+                self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
+                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix, weight=1)
             else:
                 tsdfMesh, normals= self.tsdfVolume.visualize()
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
                 self.tsdf_normals = np.asarray(normals)
 
-                # self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk, initial_pose=self.T_matrix)
-                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=0.9)    
+                self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
+                
+                ## Ground truth
+                # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=0.9)    
+                ## ICP
+                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix, weight=1)
+
             #     self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
                 # print(world_vert)
@@ -139,11 +155,14 @@ class KinectParser():
             i += self.sensor.increment
 
             if(config.getVisualizeBool()):
-                if(i >= 700):
+                if(i >= 2):
                     print("entered")
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
                     o3d.io.write_triangle_mesh("mesh_out/output.ply", tsdf_volume_mesh)
                     o3d.visualization.draw_geometries([tsdf_volume_mesh])
+
+                    print(self.T_matrix)
+                    print(self.sensor.currentTrajectory)
                     while(True):
                         pass
             if(config.getVisualizeTSDFBool()):

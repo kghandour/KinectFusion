@@ -39,11 +39,10 @@ class Transforms():
         
 
         Z = (depthMap).reshape(-1, 1)
-
         X = (X.reshape(-1, 1) - CamDetails.cX) * Z / CamDetails.fX
         Y = (Y.reshape(-1, 1) - CamDetails.cY) * Z / CamDetails.fY
         cameraSpace = torch.hstack([X, Y, Z]).reshape(depthMap.shape[0], depthMap.shape[1], 3)
-
+    
 
 
         

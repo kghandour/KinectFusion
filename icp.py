@@ -73,9 +73,8 @@ class ICPOptimizer():
         source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
         target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
 
-        source_points = self.randomSample(source_points_hom, sample_rate=0.1)
-        target_points = self.randomSample(target_points_hom, sample_rate=0.1)
-
+        source_points = self.randomSample(source_points_hom, sample_rate=0.3)
+        target_points = self.randomSample(target_points_hom, sample_rate=1)
         # source_points = source_points_hom
         # target_points = target_points_hom
 
@@ -140,10 +139,10 @@ class ICPOptimizer():
                                                                      self.num_iterations, time.time()-iteration_start_time))
 
         icp_total_time = time.time()-icp_start_time
-
-        print("")
-        print("ICP Completed with total Time : {} seconds".format(icp_total_time))
-        print("-------------------------------------------")
+        if(config.getDebug()):
+            print("")
+            print("ICP Completed with total Time : {} seconds".format(icp_total_time))
+            print("-------------------------------------------")
         return pose_estimation
 
 
