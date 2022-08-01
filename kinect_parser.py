@@ -17,7 +17,7 @@ from config import config
 import torch
 from tqdm import tqdm
 
-class Parser():
+class KinectParser():
     def __init__(self,  sensor):
         self.sensor = sensor
         self.fileBaseOut = "mesh_"

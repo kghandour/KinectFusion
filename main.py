@@ -3,7 +3,7 @@ from virtualSensor import VirtualSensor
 import numpy as np
 import math
 import os
-from parser import Parser
+from kinect_parser import KinectParser
 import torch
 import argparse
 from config import config
@@ -39,5 +39,5 @@ if __name__ == "__main__":
     # dataset = Dataset("rgbd_dataset_freiburg1_desk") ## Provides moving slam
 
     sensor = VirtualSensor(dataset,1)
-    parser = Parser(sensor)
+    parser = KinectParser(sensor)
     parser.process()
