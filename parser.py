@@ -103,14 +103,14 @@ class Parser():
             
 
             if(i==0):
-                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double))
+                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=1)
             else:
                 tsdfMesh, normals= self.tsdfVolume.visualize()
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
                 self.tsdf_normals = np.asarray(normals)
 
                 # self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.pyramids_so_far[-1]["l1"].Vk,pyramid["l1"].Nk,self.pyramids_so_far[-1]["l1"].Nk, initial_pose=self.T_matrix)
-                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double))    
+                self.tsdfVolume.integrate(self.sensor.dImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=0.9)    
             #     self.Transformation_list.append(self.T_matrix)
                 # world_vert = Transforms.cam2world(pyramid['l1'].Vk, np.eye(4))
                 # print(world_vert)
@@ -139,9 +139,10 @@ class Parser():
             i += self.sensor.increment
 
             if(config.getVisualizeBool()):
-                if(i >= 60):
+                if(i >= 700):
                     print("entered")
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
+                    o3d.io.write_triangle_mesh("mesh_out/output.ply", tsdf_volume_mesh)
                     o3d.visualization.draw_geometries([tsdf_volume_mesh])
                     while(True):
                         pass
