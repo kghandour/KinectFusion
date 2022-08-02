@@ -17,7 +17,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
 
-    def __init__(self, camera_intrinsics, min_bounds=[-3.2, -2, -3.2], max_bounds=[3.2, 2, 3.2], voxel_size=0.03, margin=2):
+    def __init__(self, camera_intrinsics, min_bounds=[-3.2, -2, -3.2], max_bounds=[3.2, 2, 3.2], voxel_size=0.03, margin=1):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -48,12 +48,14 @@ class TSDFVolume:
 
     def integrate(self, depthImage, rgbImage, pose_estimation, weight=1):
         with torch.no_grad():
-            depthImage = np.swapaxes(np.array(depthImage),0,1)
-            rgbImage = np.swapaxes(rgbImage,0,1)
-            height, width, _ = depthImage.shape
+            # depthImage = np.swapaxes(np.array(depthImage),0,1)
+            # rgbImage = np.swapaxes(rgbImage,0,1)
+            width, height, _ = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
-            depth = torch.from_numpy(depthImage)
+            # depth = torch.from_numpy(depthImage)
+            depth = depthImage
             extrinsic_inv = torch.inverse(pose)
+
 
 
             # Convert volume world cordinates to camera cordinates
@@ -74,11 +76,10 @@ class TSDFVolume:
             # get indices of valid pixels
 
             volume_pixel_cordinates_xy = torch.nan_to_num(volume_pixel_cordinates_xy,nan=0)
-            volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] is not torch.nan) &
-                                                     (volume_pixel_cordinates_xy[:, 0] >= 0) &
+            volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] >= 0) &
                                                      (volume_pixel_cordinates_xy[:, 1] >= 0) &
-                                                     (volume_pixel_cordinates_xy[:, 0] < height) &
-                                                     (volume_pixel_cordinates_xy[:, 1] < width) &
+                                                     (volume_pixel_cordinates_xy[:, 0] < width) &
+                                                     (volume_pixel_cordinates_xy[:, 1] < height) &
                                                      (volume_camera_cordinates_z[:, 0] > 0), True, False
                                                      )
 
