@@ -29,60 +29,6 @@ class KinectParser():
         self.T_matrix = np.eye(4)
         self.icp_optimizer = ICPOptimizer()
 
-    def visualize(self, vert_pos, vert_col):
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(vert_pos)
-        pcd.colors = o3d.utility.Vector3dVector(vert_col/255)
-        o3d.visualization.draw_geometries([pcd])
-
-    def one_loop(self):
-        depthMap = self.sensor.dImage
-        colorMap = self.sensor.rgbImage
-
-        dHeight = self.sensor.m_depthImageHeight
-        dWidth = self.sensor.m_depthImageWidth
-
-        cameraSpace = np.zeros((dHeight,  dWidth, 4))
-
-        trajectory = self.sensor.currentTrajectory
-        trajectoryInv = np.linalg.inv(trajectory)
-
-        for i in range(self.sensor.m_depthImageHeight):
-            for j in range(self.sensor.m_depthImageWidth):
-                x = (j - CamDetails.cX) / CamDetails.fX
-                y = (i - CamDetails.cY) / CamDetails.fY
-                depthAtPixel = depthMap[i, j]
-                if(depthAtPixel != -math.inf):
-                    cameraSpace[i, j] = np.array(
-                        [x*depthAtPixel, y*depthAtPixel, depthAtPixel, 1])
-                else:
-                    cameraSpace[i, j] = np.array(
-                        [-math.inf, -math.inf, -math.inf, -math.inf])
-
-        # vertices_position = np.zeros(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4))
-        # vertices_color = np.full(( self.sensor.m_depthImageHeight,  self.sensor.m_depthImageWidth, 4), 255)
-        vertices_position = []
-        vertices_color = []
-        for i in range(self.sensor.m_depthImageHeight):
-            for j in range(self.sensor.m_depthImageWidth):
-                depthAtPixel = depthMap[i, j]
-                if(depthAtPixel != -math.inf):
-                    vertices_position.append(
-                        trajectoryInv.dot(cameraSpace[i, j])[:3])
-                    vertices_color.append(
-                        [colorMap[i][j][0], colorMap[i][j][1], colorMap[i][j][2]])
-                    # vertices_position[i,j] = trajectoryInv.dot(cameraSpace[i,j])
-                #     vertices_color[i,j] = [colorMap[i][j][0],colorMap[i][j][1],colorMap[i][j][2],255]
-                # else:
-                #     vertices_position[i,j] = np.array([-math.inf, -math.inf, -math.inf, -math.inf])
-                #     vertices_color[i,j] = np.array([0,0,0,0])
-
-        fileName = os.path.join(
-            "mesh_out/", str(self.fileBaseOut)+str(self.sensor.currentIdx)+".off")
-        # self.WriteMesh(vertices_position, vertices_color,  self.sensor.m_colorImageWidth,  self.sensor.m_colorImageHeight, fileName)
-        # vert_pos, vert_col = self.cleanUp(vertices_position, vertices_color,  self.sensor.m_colorImageWidth,  self.sensor.m_colorImageHeight)
-        return np.array(vertices_position), np.array(vertices_color)
-
     def process(self):
         # vis_pcd = o3d.visualization.Visualizer()
         # vis_pcd.create_window()
@@ -120,6 +66,8 @@ class KinectParser():
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
                 self.tsdf_normals = np.asarray(normals)
 
+
+
                 # self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
                 
                 ## Ground truth
@@ -155,11 +103,12 @@ class KinectParser():
             i += self.sensor.increment
 
             if(config.getVisualizeBool()):
-                if(i >= 797):
+                if(i >= 150):
                     print("entered")
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
                     o3d.io.write_triangle_mesh("mesh_out/output.ply", tsdf_volume_mesh)
                     o3d.visualization.draw_geometries([tsdf_volume_mesh])
+                    
 
                     print(self.T_matrix)
                     print(self.sensor.currentTrajectory)
