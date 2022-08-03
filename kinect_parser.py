@@ -53,14 +53,14 @@ class KinectParser():
             # pyramid['l2'] = Layer(torch.nn.functional.interpolate(depthImage.permute(2,1,0),size=(w/2,h/2)).permute(2,1,0), colorImageRaw.resize((int(w/2), int(h/2))), self.sensor)
             # pyramid['l3'] = Layer(resize3(depthImage), colorImageRaw.resize((int(w/4), int(h/4))), self.sensor)
             
-
+            self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
             if(i==0):
                 ## Ground truth
                 # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=1)
                 
                 ## ICP
-                self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
-                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix, weight=1)
+                # self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
+                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix)
             else:
                 tsdfMesh, normals= self.tsdfVolume.visualize()
                 self.tsdf_vertices = np.asarray(tsdfMesh.vertices)
@@ -71,7 +71,7 @@ class KinectParser():
                 # self.T_matrix = self.icp_optimizer.estimate_pose(pyramid["l1"].Vk,self.tsdf_vertices,pyramid["l1"].Nk,self.tsdf_normals, initial_pose=self.T_matrix)
                 
                 ## Ground truth
-                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=0.9)    
+                self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double))    
                 ## ICP
                 # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,self.T_matrix, weight=1)
 
@@ -103,7 +103,7 @@ class KinectParser():
             i += self.sensor.increment
 
             if(config.getVisualizeBool()):
-                if(i >= 150):
+                if(i >= 700):
                     print("entered")
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
                     o3d.io.write_triangle_mesh("mesh_out/output.ply", tsdf_volume_mesh)
