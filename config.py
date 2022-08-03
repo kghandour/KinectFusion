@@ -5,6 +5,7 @@ class config():
     _visualize = False
     _visualizeTSDF = False
     _debug = False
+    _groundTruth = False
 
     @staticmethod
     def getTorchDevice():
@@ -21,6 +22,9 @@ class config():
     def getDebug():
         return config._debug
 
+    def useGroundTruth():
+        return config._groundTruth
+
     @staticmethod
     def setTorchDevice(device):
         config._torchDevice = device
@@ -36,3 +40,7 @@ class config():
     @staticmethod
     def setDebug(debug):
         config._debug = debug
+
+    @staticmethod
+    def setGroundTruth(groundTruth):
+        config._groundTruth = groundTruth

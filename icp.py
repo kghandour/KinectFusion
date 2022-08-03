@@ -66,13 +66,10 @@ class ICPOptimizer():
         source_noramls = source_noramls.reshape(-1,3)
         target_normals = target_normals.reshape(-1,3)
 
-
-
-
         source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
         target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
 
-        source_points = self.randomSample(source_points_hom, sample_rate=0.3)
+        source_points = self.randomSample(source_points_hom, sample_rate=1)
         target_points = self.randomSample(target_points_hom, sample_rate=1)
         # source_points = source_points_hom
         # target_points = target_points_hom
@@ -112,6 +109,7 @@ class ICPOptimizer():
 
             arranged_targets = target_points[indices]
             arranged_target_normals = target_normals[indices]
+
 
             matches = self.prune_correspondences(
                 transformed_normals[indices], arranged_target_normals, distances)

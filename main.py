@@ -12,10 +12,13 @@ from config import config
 argparser= argparse.ArgumentParser(description='Parser Arguments for KinectFusion')
 argparser.add_argument('--visualize', action='store_true', help='Visualizes using Open3D')
 argparser.add_argument('--visualizeTSDF', action='store_true', help='Visualizes using Open3D')
+argparser.add_argument('--ground', action='store_true', help='Use ground truth')
+
 
 args = argparser.parse_args()
 visualize = args.visualize
 visualizeTSDF = args.visualizeTSDF
+groundTruth = args.ground
 
 
 
@@ -32,6 +35,7 @@ if __name__ == "__main__":
     config.setTorchDevice(checkTorchDevice())
     config.setVisualize(visualize)
     config.setVisualizeTSDF(visualizeTSDF)
+    config.setGroundTruth(groundTruth)
 
     # Assumes the same file structure as the exercises. Meaning before the Exercises/KinectFusion/main.py
     # Dataset folder will be in Exercises/Data/

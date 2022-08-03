@@ -6,6 +6,8 @@ import copy
 from skimage import measure
 import open3d as o3d
 
+from config import config
+
 
 class TSDFVolume:
     """Constructor.
@@ -18,7 +20,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
         ## Bounds, lower x,z,y [ right(flipped from original), deep, ]
-    def __init__(self, camera_intrinsics, min_bounds=[-6,-5,-2.5], max_bounds=[6,0, 0], voxel_size=0.02, margin=3):
+    def __init__(self, camera_intrinsics, min_bounds=[-3.5,-3.5,-3.5], max_bounds=[3.5,3.5, 3.5], voxel_size=0.03, margin=3):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -56,16 +58,20 @@ class TSDFVolume:
             height, width, _ = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
             depth = torch.from_numpy(depthImage)
-            # depth = depthImage
-            extrinsic_inv = torch.inverse(pose)
 
+            if(not config.useGroundTruth()):
+                extrinsic_inv = torch.inverse(pose)
+                volume_camera_cordinates = torch.matmul(
+                    self.volume_world_cordinates, extrinsic_inv.T)
+            else:
+                volume_camera_cordinates = torch.matmul(
+                    self.volume_world_cordinates, pose)
 
             # Convert volume world cordinates to camera cordinates
-            volume_camera_cordinates = torch.matmul(
-                self.volume_world_cordinates, extrinsic_inv)
+            # volume_camera_cordinates = torch.matmul(
+            #     self.volume_world_cordinates, extrinsic_inv)
             
-            volume_camera_cordinates = torch.matmul(
-                self.volume_world_cordinates, pose)
+
 
             # RK
             # Z values of camera cordinates
