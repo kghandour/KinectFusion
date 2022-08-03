@@ -11,7 +11,7 @@ from config import config
 
 class ICPOptimizer():
 
-    def __init__(self, max_distance=0.017, num_iterations=10, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
+    def __init__(self, max_distance=3, num_iterations=5, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
         self.num_iterations = num_iterations
         self.max_distance = max_distance
         self.kdtree_leaf_size = kdtree_leaf_size
@@ -69,7 +69,7 @@ class ICPOptimizer():
         source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
         target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
 
-        source_points = self.randomSample(source_points_hom, sample_rate=1)
+        source_points = self.randomSample(source_points_hom, sample_rate=0.5)
         target_points = self.randomSample(target_points_hom, sample_rate=1)
         # source_points = source_points_hom
         # target_points = target_points_hom
@@ -143,28 +143,28 @@ class ICPOptimizer():
         return pose_estimation
 
 
-# if __name__ == '__main__':
-#     source = o3d.io.read_triangle_mesh("../Data/bunny_trans.off")
-#     target = o3d.io.read_triangle_mesh("../Data/bunny.off")
+if __name__ == '__main__':
+    source = o3d.io.read_triangle_mesh("../Data/bunny_trans.off")
+    target = o3d.io.read_triangle_mesh("../Data/bunny.off")
 
-#     target.compute_vertex_normals(normalized=True)
-#     source.compute_vertex_normals(normalized=True)
+    target.compute_vertex_normals(normalized=True)
+    source.compute_vertex_normals(normalized=True)
 
-#     source_vertices = np.asarray(source.vertices)
-#     source_vertices = np.c_[source_vertices, np.ones(source_vertices.shape[0])]
+    source_vertices = np.asarray(source.vertices)
+    # source_vertices = np.c_[source_vertices, np.ones(source_vertices.shape[0])]
 
-#     target_vertices = np.asarray(target.vertices)
-#     target_vertices = np.c_[target_vertices, np.ones(target_vertices.shape[0])]
+    target_vertices = np.asarray(target.vertices)
+    # target_vertices = np.c_[target_vertices, np.ones(target_vertices.shape[0])]
 
-#     source_vertex_normals = np.asarray(source.vertex_normals)
-#     target_vertex_normals = np.asarray(target.vertex_normals)
+    source_vertex_normals = np.asarray(source.vertex_normals)
+    target_vertex_normals = np.asarray(target.vertex_normals)
 
-#     # pose_estimation = np.eye(4)
+    # pose_estimation = np.eye(4)
 
-#     optimizer = ICPOptimizer(num_iterations=10)
+    optimizer = ICPOptimizer(num_iterations=10)
 
-#     pose_estimation = (optimizer.estimate_pose(source_points=source_vertices, target_points=target_vertices,
-#                                                source_noramls=source_vertex_normals, target_normals=target_vertex_normals))
-#     mesh_t = copy.deepcopy(source).transform(pose_estimation)
-#     o3d.visualization.draw_geometries([mesh_t, target])
-#     exit()
+    pose_estimation = (optimizer.estimate_pose(source_points=source_vertices, target_points=target_vertices,
+                                               source_noramls=source_vertex_normals, target_normals=target_vertex_normals))
+    mesh_t = copy.deepcopy(source).transform(pose_estimation)
+    o3d.visualization.draw_geometries([mesh_t, target])
+    exit()

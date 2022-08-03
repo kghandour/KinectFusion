@@ -57,6 +57,7 @@ class KinectParser():
                 # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=1)
                 # self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
                 ## ICP
+                # if(config.useGroundTruth()):
                 self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
                 self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw, self.T_matrix)
             else:
@@ -104,11 +105,14 @@ class KinectParser():
             # print("Reached appending")
             i += self.sensor.increment
 
+            if(i%100==0):
+                tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
+                o3d.io.write_triangle_mesh("mesh_out/output-"+str(i)+".ply", tsdf_volume_mesh)
+
             if(config.getVisualizeBool()):
-                if(i >= 150):
-                    print("entered")
+                if(i >= 700):
                     tsdf_volume_mesh,_ = self.tsdfVolume.visualize()
-                    o3d.io.write_triangle_mesh("mesh_out/output.ply", tsdf_volume_mesh)
+                    o3d.io.write_triangle_mesh("mesh_out/output"+str(i)+".ply", tsdf_volume_mesh)
                     o3d.visualization.draw_geometries([tsdf_volume_mesh])
                     
 

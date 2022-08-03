@@ -51,7 +51,7 @@ class TSDFVolume:
             self.volume_voxel_indices = torch.from_numpy(
                 self.volume_voxel_indices)
 
-    def integrate(self, depthImage, rgbImage, pose_estimation, weight=0.4):
+    def integrate(self, depthImage, rgbImage, pose_estimation, weight=1):
         with torch.no_grad():
             depthImage = np.swapaxes(np.array(depthImage),0,1)
             rgbImage = np.swapaxes(rgbImage,0,1)
@@ -62,7 +62,7 @@ class TSDFVolume:
             if(not config.useGroundTruth()):
                 extrinsic_inv = torch.inverse(pose)
                 volume_camera_cordinates = torch.matmul(
-                    self.volume_world_cordinates, extrinsic_inv.T)
+                    self.volume_world_cordinates, pose.T)
             else:
                 volume_camera_cordinates = torch.matmul(
                     self.volume_world_cordinates, pose)

@@ -1,5 +1,7 @@
 *.off
 mesh_out/
+*.json
+
 
 # MacOS
 .DS_Store
