@@ -57,8 +57,8 @@ class KinectParser():
                 # self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw,np.asarray(self.sensor.currentTrajectory, dtype=np.double), weight=1)
                 # self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
                 ## ICP
-                # if(config.useGroundTruth()):
-                self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
+                if(config.useGroundTruth()):
+                    self.T_matrix = np.asarray(self.sensor.currentTrajectory, dtype=np.double)
                 self.tsdfVolume.integrate(pyramid["l1"].depthImage, pyramid["l1"].rgbImageRaw, self.T_matrix)
             else:
                 tsdfMesh, normals= self.tsdfVolume.visualize()

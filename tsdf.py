@@ -62,7 +62,7 @@ class TSDFVolume:
             if(not config.useGroundTruth()):
                 extrinsic_inv = torch.inverse(pose)
                 volume_camera_cordinates = torch.matmul(
-                    self.volume_world_cordinates, pose.T)
+                    self.volume_world_cordinates, pose)
             else:
                 volume_camera_cordinates = torch.matmul(
                     self.volume_world_cordinates, pose)
