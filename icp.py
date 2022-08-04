@@ -9,9 +9,10 @@ from scipy.spatial.transform import Rotation as R
 import time
 from config import config
 
+
 class ICPOptimizer():
 
-    def __init__(self, max_distance=0.01, num_iterations=20, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
+    def __init__(self, max_distance=1.2, num_iterations=15, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
         self.num_iterations = num_iterations
         self.max_distance = max_distance
         self.kdtree_leaf_size = kdtree_leaf_size
@@ -60,20 +61,21 @@ class ICPOptimizer():
         return vertex_samples
 
     def estimate_pose(self, source_points, target_points, source_noramls, target_normals, initial_pose=np.eye(4), show_verbose=False):
-        
-        source_points_orig = source_points.reshape(-1,3)
-        target_points_orig = target_points.reshape(-1,3)
-        source_noramls = source_noramls.reshape(-1,3)
-        target_normals = target_normals.reshape(-1,3)
 
-        source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
-        target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
+        source_points_orig = source_points.reshape(-1, 3)
+        target_points_orig = target_points.reshape(-1, 3)
+        source_noramls = source_noramls.reshape(-1, 3)
+        target_normals = target_normals.reshape(-1, 3)
+
+        source_points_hom = np.c_[source_points_orig,
+                                  np.ones(source_points_orig.shape[0])]
+        target_points_hom = np.c_[target_points_orig,
+                                  np.ones(target_points_orig.shape[0])]
 
         source_points = self.randomSample(source_points_hom, sample_rate=0.5)
         target_points = self.randomSample(target_points_hom, sample_rate=1)
         # source_points = source_points_hom
         # target_points = target_points_hom
-
 
         tree = KDTree(target_points[:, :3], metric="euclidean")
 
@@ -83,8 +85,10 @@ class ICPOptimizer():
             print("-------------------------------------------")
             print("ICP starting with : ")
             print("Number of Iterations : {}".format(self.num_iterations))
-            print("Number of Source Points : {}".format(source_points.shape[0]))
-            print("Number of Target Points : {}".format(target_points.shape[0]))
+            print("Number of Source Points : {}".format(
+                source_points.shape[0]))
+            print("Number of Target Points : {}".format(
+                target_points.shape[0]))
             print("Initial Pose : {}".format(initial_pose))
         # print("-------------------------------------------")
 
@@ -109,7 +113,6 @@ class ICPOptimizer():
 
             arranged_targets = target_points[indices]
             arranged_target_normals = target_normals[indices]
-
 
             matches = self.prune_correspondences(
                 transformed_normals[indices], arranged_target_normals, distances)
