@@ -20,7 +20,7 @@ class TSDFVolume:
             number of voxels in the xyz directirons.
     """
         ## Bounds, lower x,z,y [ right(flipped from original), deep, ]
-    def __init__(self, camera_intrinsics, min_bounds=[-3.5,-3.5,-3.5], max_bounds=[3.5,3.5, 3.5], voxel_size=0.03, margin=3):
+    def __init__(self, camera_intrinsics, min_bounds=[-6,-4.5,-3.5], max_bounds=[6,3.5, 3.5], voxel_size=0.02, margin=3):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
