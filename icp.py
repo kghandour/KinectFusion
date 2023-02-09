@@ -7,11 +7,12 @@ import open3d as o3d
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation as R
 import time
+from config import config
 
 
 class ICPOptimizer():
 
-    def __init__(self, max_distance=0.017, num_iterations=10, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
+    def __init__(self, max_distance=1.5, num_iterations=15, kdtree_leaf_size=40, kdtree_query_dual_tree=True, kdtree_query_breadth_first=True):
         self.num_iterations = num_iterations
         self.max_distance = max_distance
         self.kdtree_leaf_size = kdtree_leaf_size
@@ -41,7 +42,6 @@ class ICPOptimizer():
 
     @staticmethod
     def point_to_plane_distance(X, SP, TP, TN):
-
         A = np.identity(4)
         rotation_matrix = R.from_mrp(
             [X[0], X[1], X[2]]).as_matrix()
@@ -61,33 +61,35 @@ class ICPOptimizer():
         return vertex_samples
 
     def estimate_pose(self, source_points, target_points, source_noramls, target_normals, initial_pose=np.eye(4), show_verbose=False):
-        source_points_orig = source_points.reshape(-1,3)
-        target_points_orig = target_points.reshape(-1,3)
-        source_noramls = source_noramls.reshape(-1,3)
-        target_normals = target_normals.reshape(-1,3)
 
+        source_points_orig = source_points.reshape(-1, 3)
+        target_points_orig = target_points.reshape(-1, 3)
+        source_noramls = source_noramls.reshape(-1, 3)
+        target_normals = target_normals.reshape(-1, 3)
 
+        source_points_hom = np.c_[source_points_orig,
+                                  np.ones(source_points_orig.shape[0])]
+        target_points_hom = np.c_[target_points_orig,
+                                  np.ones(target_points_orig.shape[0])]
 
-
-        source_points_hom = np.c_[source_points_orig, np.ones(source_points_orig.shape[0])]
-        target_points_hom = np.c_[target_points_orig, np.ones(target_points_orig.shape[0])]
-
-        source_points = self.randomSample(source_points_hom, sample_rate=0.1)
-        target_points = self.randomSample(target_points_hom, sample_rate=0.1)
-
+        source_points = self.randomSample(source_points_hom, sample_rate=0.5)
+        target_points = self.randomSample(target_points_hom, sample_rate=1)
         # source_points = source_points_hom
         # target_points = target_points_hom
-
 
         tree = KDTree(target_points[:, :3], metric="euclidean")
 
         pose_estimation = copy.deepcopy(initial_pose)
-        print("-------------------------------------------")
-        print("ICP starting with : ")
-        print("Number of Iterations : {}".format(self.num_iterations))
-        print("Number of Source Points : {}".format(source_points.shape[0]))
-        print("Number of Target Points : {}".format(target_points.shape[0]))
-        print("Initial Pose : {}".format(initial_pose))
+
+        if(config.getDebug()):
+            print("-------------------------------------------")
+            print("ICP starting with : ")
+            print("Number of Iterations : {}".format(self.num_iterations))
+            print("Number of Source Points : {}".format(
+                source_points.shape[0]))
+            print("Number of Target Points : {}".format(
+                target_points.shape[0]))
+            print("Initial Pose : {}".format(initial_pose))
         # print("-------------------------------------------")
 
         icp_start_time = time.time()
@@ -137,35 +139,35 @@ class ICPOptimizer():
                                                                      self.num_iterations, time.time()-iteration_start_time))
 
         icp_total_time = time.time()-icp_start_time
-
-        print("")
-        print("ICP Completed with total Time : {} seconds".format(icp_total_time))
-        print("-------------------------------------------")
+        if(config.getDebug()):
+            print("")
+            print("ICP Completed with total Time : {} seconds".format(icp_total_time))
+            print("-------------------------------------------")
         return pose_estimation
 
 
-# if __name__ == '__main__':
-#     source = o3d.io.read_triangle_mesh("../Data/bunny_trans.off")
-#     target = o3d.io.read_triangle_mesh("../Data/bunny.off")
+if __name__ == '__main__':
+    source = o3d.io.read_triangle_mesh("../Data/bunny_trans.off")
+    target = o3d.io.read_triangle_mesh("../Data/bunny.off")
 
-#     target.compute_vertex_normals(normalized=True)
-#     source.compute_vertex_normals(normalized=True)
+    target.compute_vertex_normals(normalized=True)
+    source.compute_vertex_normals(normalized=True)
 
-#     source_vertices = np.asarray(source.vertices)
-#     source_vertices = np.c_[source_vertices, np.ones(source_vertices.shape[0])]
+    source_vertices = np.asarray(source.vertices)
+    # source_vertices = np.c_[source_vertices, np.ones(source_vertices.shape[0])]
 
-#     target_vertices = np.asarray(target.vertices)
-#     target_vertices = np.c_[target_vertices, np.ones(target_vertices.shape[0])]
+    target_vertices = np.asarray(target.vertices)
+    # target_vertices = np.c_[target_vertices, np.ones(target_vertices.shape[0])]
 
-#     source_vertex_normals = np.asarray(source.vertex_normals)
-#     target_vertex_normals = np.asarray(target.vertex_normals)
+    source_vertex_normals = np.asarray(source.vertex_normals)
+    target_vertex_normals = np.asarray(target.vertex_normals)
 
-#     # pose_estimation = np.eye(4)
+    # pose_estimation = np.eye(4)
 
-#     optimizer = ICPOptimizer(num_iterations=10)
+    optimizer = ICPOptimizer(num_iterations=10)
 
-#     pose_estimation = (optimizer.estimate_pose(source_points=source_vertices, target_points=target_vertices,
-#                                                source_noramls=source_vertex_normals, target_normals=target_vertex_normals))
-#     mesh_t = copy.deepcopy(source).transform(pose_estimation)
-#     o3d.visualization.draw_geometries([mesh_t, target])
-#     exit()
+    pose_estimation = (optimizer.estimate_pose(source_points=source_vertices, target_points=target_vertices,
+                                               source_noramls=source_vertex_normals, target_normals=target_vertex_normals))
+    mesh_t = copy.deepcopy(source).transform(pose_estimation)
+    o3d.visualization.draw_geometries([mesh_t, target])
+    exit()

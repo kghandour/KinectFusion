@@ -2,6 +2,9 @@ import os
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
+import torch
+from config import config
+
 
 
 class Dataset():
@@ -27,7 +30,9 @@ class Dataset():
         groundtruth_file = open(self.groundtruth_path, "r")
 
         self.number_frames = sum(1 for line in depth_file)
-        if(self.number_frames != sum(1 for line in rgb_file)):
+        self.rgb_number_frames = sum(1 for line in rgb_file)
+        if(self.number_frames != self.rgb_number_frames):
+            print(self.number_frames, self.rgb_number_frames)
             raise Exception("Depth and Color files frames do not match. Please make sure that they have the same number of lines")
 
         depth_file.close()
@@ -83,14 +88,14 @@ class Dataset():
             
             self.trajectory_timestamps.append(trajectory_split[0])
             temp_traj = trajectory_split[1:]
-            trajMatrix = np.identity(4)
-            trajMatrix[0,3] = temp_traj[0]
-            trajMatrix[1,3] = temp_traj[1]
-            trajMatrix[2,3] = temp_traj[2]
+            trajMatrix = torch.eye(4)
+            trajMatrix[0,3] = float(temp_traj[0])
+            trajMatrix[1,3] = float(temp_traj[1])
+            trajMatrix[2,3] = float(temp_traj[2])
             rotMatrix = R.from_quat(temp_traj[3:]).as_matrix()
-            trajMatrix[0:3,0:3] = rotMatrix
+            trajMatrix[0:3,0:3] = torch.from_numpy(rotMatrix)
             if(np.linalg.norm(rotMatrix)==0):
                 break
 
-            trajInverse = np.linalg.inv(trajMatrix)
+            trajInverse = torch.linalg.inv(trajMatrix)
             self.trajectory.append(trajInverse)

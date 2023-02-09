@@ -1,8 +1,12 @@
+from tokenize import Double
+from turtle import width
 import numpy as np
 import torch
 import copy
 from skimage import measure
 import open3d as o3d
+
+from config import config
 
 
 class TSDFVolume:
@@ -15,8 +19,9 @@ class TSDFVolume:
         num_voxels (ndarray): An ndarray of shape (3,). Specifies the
             number of voxels in the xyz directirons.
     """
+    # Bounds, lower x,z,y [ right(flipped from original), deep, ]
 
-    def __init__(self, camera_intrinsics, min_bounds=[-2.5, -2, -0.2], max_bounds=[1.5, 2.5, 1.5], voxel_size=0.04, margin=5):
+    def __init__(self, camera_intrinsics, min_bounds=[-3.5, -3.5, -3.5], max_bounds=[3.5, 3.5, 3.5], voxel_size=0.03, margin=3):
         # torch.backends.cuda.matmul.allow_tf32 = Falses
         self.min_bounds = np.asarray(min_bounds)
         self.max_bounds = np.asarray(max_bounds)
@@ -27,6 +32,7 @@ class TSDFVolume:
 
         self.volume_size = np.ceil(
             (self.max_bounds-self.min_bounds)/self.voxel_size).astype(int)
+        
 
         with torch.no_grad():
             self.tsdf_volume = torch.ones(
@@ -47,23 +53,30 @@ class TSDFVolume:
 
     def integrate(self, depthImage, rgbImage, pose_estimation, weight=1):
         with torch.no_grad():
-            depthImage = np.array(depthImage)
-            print(depthImage.shape)
-            rgbImage = np.swapaxes(rgbImage,0,1)
-            print(rgbImage.shape)
-            height, width = depthImage.shape
+            depthImage = np.swapaxes(np.array(depthImage), 0, 1)
+            rgbImage = np.swapaxes(rgbImage, 0, 1)
+            height, width, _ = depthImage.shape
             pose = torch.from_numpy(pose_estimation)
             depth = torch.from_numpy(depthImage)
-            extrinsic_inv = torch.inverse(pose)
+
+            if(not config.useGroundTruth()):
+                extrinsic_inv = torch.inverse(pose)
+                volume_camera_cordinates = torch.matmul(
+                    self.volume_world_cordinates, extrinsic_inv)
+            else:
+                volume_camera_cordinates = torch.matmul(
+                    self.volume_world_cordinates, pose)
 
             # Convert volume world cordinates to camera cordinates
-            volume_camera_cordinates = torch.matmul(
-                self.volume_world_cordinates, extrinsic_inv.T)
+            # volume_camera_cordinates = torch.matmul(
+            #     self.volume_world_cordinates, extrinsic_inv)
 
             # RK
             # Z values of camera cordinates
             volume_camera_cordinates_z = torch.broadcast_to(
                 volume_camera_cordinates[:, 2], (2, -1)).T
+            # print(torch.min(volume_camera_cordinates_z[:, 0]), torch.max(volume_camera_cordinates_z[:, 0]))
+
             # Convert volume camera cordinates to pixel cordinates
             volume_pixel_cordinates_xyz = torch.matmul(
                 volume_camera_cordinates[:, :3], self.camera_intrinsics_T)
@@ -73,11 +86,15 @@ class TSDFVolume:
                 volume_pixel_cordinates_xyz[:, :2], volume_camera_cordinates_z, rounding_mode='floor').long()
             # get indices of valid pixels
 
+            volume_pixel_cordinates_xy = torch.nan_to_num(
+                volume_pixel_cordinates_xy, nan=-1)
+            volume_camera_cordinates_z = torch.nan_to_num(
+                volume_camera_cordinates_z, nan=-10)
             volume_camera_valid_pixels = torch.where((volume_pixel_cordinates_xy[:, 0] >= 0) &
                                                      (volume_pixel_cordinates_xy[:, 1] >= 0) &
                                                      (volume_pixel_cordinates_xy[:, 0] < height) &
                                                      (volume_pixel_cordinates_xy[:, 1] < width) &
-                                                     (volume_camera_cordinates_z[:, 0] > 0), True, False
+                                                     (volume_camera_cordinates_z[:, 0] > -2), True, False
                                                      )
 
             # Apply indexing  to get the depth value of valid pixels
@@ -146,4 +163,15 @@ class TSDFVolume:
         mesh.vertex_colors = o3d.utility.Vector3dVector(
             vertex_colors.astype(np.uint8) / 255.)
 
-        return mesh
+        mesh.transform(np.array([
+            [1, 0, 0, 0.5], [0, -1, 0, 0.45], [0, 0, 1, -0.1], [0, 0, 0, 1]
+
+        ]))
+        mesh.rotate(mesh.get_rotation_matrix_from_xyz(
+            (0, 0, np.pi / 2)), center=(0, 0, 0))
+
+        mesh.compute_vertex_normals()
+
+        normals = mesh.vertex_normals
+
+        return mesh, normals

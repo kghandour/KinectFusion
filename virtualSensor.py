@@ -1,3 +1,5 @@
+import torch
+from torchvision import transforms
 from dataset import Dataset
 from PIL import Image
 import numpy as np
@@ -5,6 +7,8 @@ import os
 import math
 from camera_sensors import CamDetails
 import copy
+from tqdm import tqdm
+
 
 
 class VirtualSensor():
@@ -32,24 +36,28 @@ class VirtualSensor():
         self.m_colorExtrinsics = np.identity(4)
         self.m_depthExtrinsics = np.identity(4)
 
-        self.m_depthFrame = np.full((self.m_depthImageWidth, self.m_depthImageHeight), 0.5)
-        self.m_colorFrame = np.full((self.m_colorImageWidth, self.m_colorImageHeight),255)
+        self.m_depthFrame = torch.full((self.m_depthImageWidth, self.m_depthImageHeight), 0.5)
+        self.m_colorFrame = torch.full((self.m_colorImageWidth, self.m_colorImageHeight),255)
 
-    def processNextFrame(self):
+    def processNextFrame(self, pbar=None):
         if(self.currentIdx==-1):
             self.currentIdx =0
         else:
             self.currentIdx += self.increment
 
+
         if(self.currentIdx>=len(self.rgb_images_path)):
             return False
         
-        print("ProcessNextFrame "+str(self.currentIdx)+" | " + str(len((self.rgb_images_path))))
+        if ( pbar is not None):
+            pbar.update(1)
+        # print("ProcessNextFrame "+str(self.currentIdx)+" | " + str(len((self.rgb_images_path))))
 
-        self.rgbImage = np.asarray(Image.open(os.path.join(self.kinect_dataset_path,self.rgb_images_path[self.currentIdx])))
+        transform_toTensor = transforms.ToTensor()
+        self.rgbImage = Image.open(os.path.join(self.kinect_dataset_path,self.rgb_images_path[self.currentIdx]))
         self.dImageRaw = Image.open(os.path.join(self.kinect_dataset_path,self.depth_images_path[self.currentIdx]))
-        self.dImage = np.asarray(self.dImageRaw)
-        self.dImage = np.where(self.dImage==0, -math.inf, self.dImage * 1 / 5000)
+        self.dImage = transform_toTensor(self.dImageRaw).permute(2,1,0)
+        self.dImage = torch.where(self.dImage==0, -math.inf, self.dImage * 1 / 5000)
 
         
         ## Finds the nearest neighbouring trajectory
